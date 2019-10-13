@@ -4,10 +4,10 @@
 # ~
 
 import sys
-from aysa.docker.command import Command, NoSuchCommand
+from aysa.docker.command import NoSuchCommand
 
 
-class TopLevelCommand(Command):
+class TopLevelCommand:
     """
     > AySA Command Line: utilidad para la gestión de despliegues en `docker`.
 
@@ -20,30 +20,18 @@ class TopLevelCommand(Command):
         -D, --debug                   Activa el modo `debug`.
         -O, --debug-output filename   Archivo de salida para el modo `debug`.
         -E, --env filename            Archivo de configuración del entorno (`.reg`).
+        -X, --proxy config            Configuración del `proxy` en una sola línea:
+                                      `<protocol>://<username>:<password>@<host>:<port>`
 
-    Commands:
-        resume    Información respecto del estado del `repositorio`.
-        tag       Administra los `tags` del `repositorio`.
-        make      Crea las `imágenes` para los entorno de `QA` y `PRODUCCIÓN`.
-        prune     Purga la `repositorio`.
-
+    Available commands:
+        resume          Muestra el `estado` de los servicios deplegados.
+        registry        Administra los `repositorios` de imágenes.
+        container       Administra los `contenedores` de los escenarios disponibles.
     --
     """
     def __init__(self, command, options=None, **kwargs):
-        super().__init__(None, options, **kwargs)
+        pass
     
-    def resume(self, options):
-        pass
-
-    def tag(self, options):
-        pass
-
-    def make(self, options):
-        pass
-
-    def prune(self, options):
-        pass
-
 
 def main():
     try:
