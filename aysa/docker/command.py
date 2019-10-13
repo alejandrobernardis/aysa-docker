@@ -8,7 +8,6 @@ from docopt import docopt, DocoptExit
 
 
 CONST_COMMAND = 'COMMAND'
-CONST_SERVICE = 'SERVICE'
 CONST_ARGS = 'ARGS'
 
 
@@ -25,6 +24,10 @@ class Command:
         self.options = options or {}
         self.parent = kwargs.pop('parent', None)
 
+    @property
+    def is_toplevel(self):
+        return self.command is None
+
     def get_doc(self):
         return getdoc(self)
 
@@ -36,6 +39,9 @@ class Command:
 
     def execute(self):
         raise NotImplementedError()
+
+    def __call__(self, *arg, **kwargs):
+        pass
 
 
 class NoSuchCommand(Exception):

@@ -7,43 +7,47 @@ import sys
 from aysa.docker.command import Command, NoSuchCommand
 
 
-class Dispatcher:
-    def __init__(self, command, options):
-        self.command = command
-        self.options = options
-
-
 class TopLevelCommand(Command):
     """
     > AySA Command Line: utilidad para la gestión de despliegues en `docker`.
 
     Usage:
-      dreg [options] [COMMAND] [ARGS...]
-      dreg -h|--help
+        aysa [options] [COMMAND] [ARGS...]
+        aysa -h|--help
 
     Options:
-      -V, --version                 muestra la `versión` del programa.
-      -D, --debug                   activa el modo `debug`.
-      -O, --debug-output filename   archivo de salida para el modo `debug`.
-      -E, --env filename            archivo de configuración del entorno (`.reg`).
+        -V, --version                 Muestra la `versión` del programa.
+        -D, --debug                   Activa el modo `debug`.
+        -O, --debug-output filename   Archivo de salida para el modo `debug`.
+        -E, --env filename            Archivo de configuración del entorno (`.reg`).
 
     Commands:
-      image     administra las `imágenes` del `repositorio`.
-      tag       administra los `tags` del `repositorio`.
-      make      crea las `imágenes` para los entorno de `QA` y `PRODUCCIÓN`.
-      prune     purga la `registry`.
+        resume    Información respecto del estado del `repositorio`.
+        tag       Administra los `tags` del `repositorio`.
+        make      Crea las `imágenes` para los entorno de `QA` y `PRODUCCIÓN`.
+        prune     Purga la `repositorio`.
 
     --
     """
-    pass
+    def __init__(self, command, options=None, **kwargs):
+        super().__init__(None, options, **kwargs)
+    
+    def resume(self, options):
+        pass
+
+    def tag(self, options):
+        pass
+
+    def make(self, options):
+        pass
+
+    def prune(self, options):
+        pass
 
 
 def main():
     try:
-        cmd = Dispatcher(TopLevelCommand, {
-            'options_first': True, 
-            'version': 'v1.0'
-        })
+        pass
     except KeyboardInterrupt:
         log.error("Aborting.")
     except NoSuchCommand as e:
