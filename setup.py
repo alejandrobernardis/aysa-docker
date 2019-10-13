@@ -24,8 +24,9 @@ setup(
     author_email=aysa.__email__,
     keywords='docker registry services development',
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
-    python_requires='>=3, <4',
+    python_requires='>=3.6.*, <4',
 
+    # TODO(0608156): crear un archivo requirements.txt con pipenv.
     install_requires=[],
 
     classifiers=[
