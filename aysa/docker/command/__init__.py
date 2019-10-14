@@ -3,6 +3,7 @@
 # Created: 2019/10/13
 # ~
 
+import sys
 from inspect import getdoc
 from functools import lru_cache
 from docopt import docopt, DocoptExit
@@ -32,7 +33,7 @@ class Command:
 
     @lru_cache()
     def get_doc(self):
-        return getdoc(self)
+        return getdoc(self) + '\n'
 
     def get_docopt(self, *args, **kwargs):
         return docopt_helper(self.get_doc(), *args, **kwargs)
@@ -41,13 +42,21 @@ class Command:
         options = self.get_docopt(argv, *args, **kwargs)
         command = options[CONST_COMMAND]
 
-        if command is None:
+        if command is None or not hasattr(self, command):
             raise SystemExit(self.get_doc())
 
-        return command, options
+        getattr(self, command)(options)
 
     def __call__(self, argv, *args, **kwargs):
         return self.parse(argv, *args, **kwargs)
+
+    def __enter__(self, *args, **kwargs):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is SystemExit:
+            print(exc_val)
+        sys.exit()
 
 
 class NoSuchCommand(Exception):

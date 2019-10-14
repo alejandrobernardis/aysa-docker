@@ -29,16 +29,14 @@ class TopLevelCommand(Command):
         registry        Administra los `repositorios` de imágenes.
         container       Administra los `contenedores` de los escenarios disponibles.
     """
-    def __init__(self, command, options=None, **kwargs):
-        super().__init__(command, options, **kwargs)
-    
+    def resume(self, *args, **kwargs):
+        print(self.options)    
 
 def main():
     try:
-        cmd = TopLevelCommand(None, {'version': aysa.__version__})
-        result = cmd(sys.argv[1:])
-        return 
-
+        with TopLevelCommand(None, {'version': aysa.__version__}) as cmd:
+            cmd.parse(sys.argv[1:])
+        
     except KeyboardInterrupt:
         pass
 
