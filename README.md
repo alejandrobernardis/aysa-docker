@@ -11,10 +11,16 @@ Las dependencias se encuentran definidas en el archivo `Pipfile`, para la gesti�
 * Documentaci처n: [**usage**](https://pipenv.readthedocs.io/en/latest/#pipenv-usage).
 * Instalaci처n: `pip install pipenv`.
 
-### Instalaci처n
+#### Instalaci처n de las dependencias:
 
 ```bash
 > pipenv install
+```
+
+#### Iniciar el Shell:
+
+```bash
+> pipenv shell
 ```
 
 ## Documentaci처n
