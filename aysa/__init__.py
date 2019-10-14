@@ -8,15 +8,11 @@ import os
 try:
     import ujson as json
     is_ujson = True
-    import json
 
 except ImportError:
-    try:
-        import simplejson as json
-    
-    except ImportError:
-        import json
+    import json
     is_ujson = False
+
 
 __all__ = [
     '__title__',
@@ -35,6 +31,9 @@ __all__ = [
 
 # const
 WIN = os.name == 'nt'
+SETTINGS_FILE = '~/.aysa/docker.yml'
+
+# version
 SEGMENT = 'dev'
 VERSION = (1, 0, 0, SEGMENT, 0)
 

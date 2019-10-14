@@ -4,10 +4,11 @@
 # ~
 
 import sys
-from aysa.docker.command import NoSuchCommand
+import aysa
+from aysa.docker.command import NoSuchCommand, Command
 
 
-class TopLevelCommand:
+class TopLevelCommand(Command):
     """
     > AySA Command Line: utilidad para la gestión de despliegues en `docker`.
 
@@ -27,17 +28,21 @@ class TopLevelCommand:
         resume          Muestra el `estado` de los servicios deplegados.
         registry        Administra los `repositorios` de imágenes.
         container       Administra los `contenedores` de los escenarios disponibles.
-    --
     """
     def __init__(self, command, options=None, **kwargs):
-        pass
+        super().__init__(command, options, **kwargs)
     
 
 def main():
     try:
-        pass
+        cmd = TopLevelCommand(None, {'version': aysa.__version__})
+        print(cmd(sys.argv[1:]))
+        return 
+
     except KeyboardInterrupt:
-        log.error("Aborting.")
+        pass
+
     except NoSuchCommand as e:
-        log.error("No such command: %s", e.command)
+        pass
+
     sys.exit(1)
