@@ -36,7 +36,7 @@ class TopLevelCommand(Command):
 def main():
     try:
         cmd = TopLevelCommand(None, {'version': aysa.__version__})
-        print(cmd(sys.argv[1:]))
+        result = cmd(sys.argv[1:])
         return 
 
     except KeyboardInterrupt:
