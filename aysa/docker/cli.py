@@ -39,24 +39,27 @@ class TopLevelCommand(Command):
     def __init__(self, options=None, **kwargs):
         super().__init__(None, options, **kwargs)
 
-    def tag(self):
+    def tag(self, **kwargs):
         """
-        * TAG: Administra los `tags` para el despliegue de los servicios.
+        Administra los `tags` para el despliegue de los servicios.
 
         Usage:
-            tag COMMAND [ARGS ...]
+            tag COMMAND [options] [ARGS ...]
+
+        Opciones:
+            -v, --verbose       Activa el modo `verbose`.
 
         Available commands:
             ls          Lista los `tags` diponibles en el `repositorio`.
             add         Crea un nuevo `tag` a partir de otro existente.
             delete      Elimina un `tag` existente.
+
         """
-        r = Registry('localhost')
-        print(r.get_baseurl())
+        TagCommand(kwargs, parent=self).execute(**kwargs)
 
     def make(self):
         """
-        * MAKE: Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
+        Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
 
         Usage:
             make COMMAND [ARGS ...]
@@ -65,8 +68,34 @@ class TopLevelCommand(Command):
             test    Crea las `imágenes` para el entorno de `QA/TESTING`.
             prod    Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
         """
+        MakeCommand(options, parent=self).execute(**kwargs)
+
+
+class TagCommand(Command):
+    def __init__(self, options=None, **kwargs):
+        super().__init__(self.__class__.__name__, options, **kwargs)
+
+    def ls(self):
+        """
+        Lista los `tags` existentes en el repositorio.
+
+        Usage:
+            tag ls [IMAGEN ...]
+
+        Opciones:
+            -v, --verbose       Activa el modo `verbose`.
+        """
         pass
 
+    def add(self):
+        pass
+
+    def delete(self):
+        pass
+
+
+class TagCommand(Command):
+    pass
 
 def main():
     try:

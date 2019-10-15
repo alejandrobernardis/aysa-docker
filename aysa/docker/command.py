@@ -34,22 +34,25 @@ class Command:
         self.options.setdefault('options_first', True)
         self.parent = kwargs.pop('parent', None)
 
-    def parse(self, argv=EMPTY, *args, **kwargs):
-        if argv is EMPTY:
-            argv = sys.argv[1:]
-
+    def parse(self, argv=None, *args, **kwargs):
+        # principal
         kwargs.update(self.options)
         options = docopt_helper(self, argv, *args, **kwargs)
-        command = options[CONST_COMMAND]
+        _command = options.pop(CONST_COMMAND)
+        _arguments = options.pop(CONST_ARGS)
+        self.options.update(options)
+        # secundario
+        handler = self.find_command(_command)
+        handler_opts = docopt_helper(handler, _arguments, options_first=True)
+        handler(**{k.lower(): v for k, v in handler_opts.items()})
 
-        if not hasattr(self, command):
+    def execute(self, command, args=None, **kwargs):
+        print(command, args, kwargs)
+
+    def find_command(self, command):
+        if command is None or not hasattr(self, command):
             raise NoSuchCommand(command)
-
-        handler = getattr(self, command)
-        handler_opts = docopt_helper(handler, options['ARGS'],
-                                     options_first=True)
-        print(handler_opts)
-        handler()
+        return getattr(self, command)
 
     def __call__(self, argv=None, *args, **kwargs):
         return self.parse(argv, *args, **kwargs)

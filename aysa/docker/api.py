@@ -160,8 +160,8 @@ class RegistryError(Exception):
     pass
 
 
-api = Api('10.17.65.128:5000', insecure=True, credentials='dashboard:dashboard')
 
-for x in api.catalog():
-    for y in api.tags(x):
-        print(x, y)
+# api = Api('10.17.65.128:5000', insecure=True, credentials='dashboard:dashboard')
+# for x in api.catalog():
+#     for y in api.tags(x):
+#         print(x, y)
