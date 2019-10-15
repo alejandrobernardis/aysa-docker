@@ -134,6 +134,14 @@ class Manifest(Entity):
 
 
 class Api:
+    """
+    opt = dict(insecure=True, credentials='dashboard:dashboard')
+    api = Api('10.17.65.128:5000', **opt)
+
+    for x in api.catalog():
+        for y in api.tags(x):
+            print(x, y)
+    """
     def __init__(self, host, insecure=False, verify=True, credentials=None):
         self.registry = Registry(host, insecure, verify, credentials)
 
@@ -158,10 +166,3 @@ class Api:
 
 class RegistryError(Exception):
     pass
-
-
-
-# api = Api('10.17.65.128:5000', insecure=True, credentials='dashboard:dashboard')
-# for x in api.catalog():
-#     for y in api.tags(x):
-#         print(x, y)

@@ -41,13 +41,17 @@ class Command:
         _command = options.pop(CONST_COMMAND)
         _arguments = options.pop(CONST_ARGS)
         self.options.update(options)
+
         # secundario
         handler = self.find_command(_command)
         handler_opts = docopt_helper(handler, _arguments, options_first=True)
         handler(**{k.lower(): v for k, v in handler_opts.items()})
 
     def execute(self, command, args=None, **kwargs):
-        print(command, args, kwargs)
+        kwargs.setdefault('options_first', True)
+        handler = self.find_command(command)
+        options = docopt_helper(handler, args, **kwargs)
+        handler(**options)
 
     def find_command(self, command):
         if command is None or not hasattr(self, command):

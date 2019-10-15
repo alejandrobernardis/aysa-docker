@@ -44,12 +44,9 @@ class TopLevelCommand(Command):
         Administra los `tags` para el despliegue de los servicios.
 
         Usage:
-            tag COMMAND [options] [ARGS ...]
+            tag COMMAND [ARGS ...]
 
-        Opciones:
-            -v, --verbose       Activa el modo `verbose`.
-
-        Available commands:
+        Comandos disponibles:
             ls          Lista los `tags` diponibles en el `repositorio`.
             add         Crea un nuevo `tag` a partir de otro existente.
             delete      Elimina un `tag` existente.
@@ -64,7 +61,7 @@ class TopLevelCommand(Command):
         Usage:
             make COMMAND [ARGS ...]
 
-        Available commands:
+        Comandos disponibles:
             test    Crea las `imágenes` para el entorno de `QA/TESTING`.
             prod    Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
         """
@@ -75,27 +72,40 @@ class TagCommand(Command):
     def __init__(self, options=None, **kwargs):
         super().__init__(self.__class__.__name__, options, **kwargs)
 
-    def ls(self):
+    def ls(self, **kwargs):
         """
         Lista los `tags` existentes en el repositorio.
 
         Usage:
-            tag ls [IMAGEN ...]
+            ls [options] [ARGS ...]
 
         Opciones:
             -v, --verbose       Activa el modo `verbose`.
         """
-        pass
+        print(kwargs)
 
-    def add(self):
-        pass
+    def add(self, **kwargs):
+        """
+        Crea un nuevo `tag` a partir de otro existente.
 
-    def delete(self):
-        pass
+        Usage:
+            add [options] [ARGS ...]
+        """
+        print(kwargs)
+
+    def delete(self, **kwargs):
+        """
+        Elimina un `tag` existente.
+
+        Usage:
+            delete [options] [ARGS ...]
+        """
+        print(kwargs)
 
 
-class TagCommand(Command):
+class MakeCommand(Command):
     pass
+
 
 def main():
     try:
@@ -106,3 +116,7 @@ def main():
     except NoSuchCommand:
         log.error("No such command.")
     sys.exit(1)
+
+# python -m aysa tag ls -v web:dev
+# python -m aysa tag add web:dev rc
+# python -m aysa tag delete web:dev
