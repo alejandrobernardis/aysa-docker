@@ -16,6 +16,8 @@ CONST_ARGS = 'ARGS'
 
 def docopt_helper(docstring, *args, **kwargs):
     try:
+        if not isinstance(docstring, str):
+            docstring = docstring_helper(docstring)
         return docopt(docstring, *args, **kwargs)
     except DocoptExit:
         raise SystemExit(docstring)
@@ -37,31 +39,20 @@ class Command:
             argv = sys.argv[1:]
 
         kwargs.update(self.options)
-        docstring = docstring_helper(self)
-        options = docopt_helper(docstring, argv, *args, **kwargs)
+        options = docopt_helper(self, argv, *args, **kwargs)
         command = options[CONST_COMMAND]
 
         if not hasattr(self, command):
             raise NoSuchCommand(command)
 
         handler = getattr(self, command)
-        handler_docs = docstring_helper(handler)
-        handler_opts = docopt_helper(handler_docs, options['ARGS'], 
+        handler_opts = docopt_helper(handler, options['ARGS'],
                                      options_first=True)
         print(handler_opts)
+        handler()
 
     def __call__(self, argv=None, *args, **kwargs):
         return self.parse(argv, *args, **kwargs)
-
-    def __enter__(self, *args, **kwargs):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        exit_code = 0
-        if exc_val is not None:
-            exit_code = 1
-            print(exc_val)
-        sys.exit(exit_code)
 
 
 class NoSuchCommand(Exception):

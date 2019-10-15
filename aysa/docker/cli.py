@@ -5,8 +5,9 @@
 # -V, --verbose     Activa el modo `verbose`.
 
 import sys
-import aysa
 import logging
+from aysa import __version__
+from aysa.docker.api import Registry
 from aysa.docker.command import NoSuchCommand, Command
 
 # logger
@@ -18,11 +19,11 @@ console_handler = logging.StreamHandler(sys.stderr)
 class TopLevelCommand(Command):
     """
     AySA, Utilidad para la gestión de despliegues en `docker`.
-    
+
     Usage:
         aysa [options] COMMAND [ARGS...]
 
-    Options:
+    Opciones:
         -h, --help                    Muestra la `ayuda` del programa.
         -V, --version                 Muestra la `versión` del programa.
         -D, --debug                   Activa el modo `debug`.
@@ -31,7 +32,7 @@ class TopLevelCommand(Command):
         -X, --proxy config            Configuración del `proxy` en una sola línea:
                                       `<protocol>://<username>:<password>@<host>:<port>`
 
-    Available commands:
+    Comandos disponibles:
         tag         Administra los `tags` del `repositorio`.
         make        Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
     """
@@ -44,13 +45,14 @@ class TopLevelCommand(Command):
 
         Usage:
             tag COMMAND [ARGS ...]
-        
+
         Available commands:
             ls          Lista los `tags` diponibles en el `repositorio`.
             add         Crea un nuevo `tag` a partir de otro existente.
             delete      Elimina un `tag` existente.
         """
-        pass
+        r = Registry('localhost')
+        print(r.get_baseurl())
 
     def make(self):
         """
@@ -58,7 +60,7 @@ class TopLevelCommand(Command):
 
         Usage:
             make COMMAND [ARGS ...]
-        
+
         Available commands:
             test    Crea las `imágenes` para el entorno de `QA/TESTING`.
             prod    Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
@@ -68,8 +70,8 @@ class TopLevelCommand(Command):
 
 def main():
     try:
-        cmd = TopLevelCommand({'version': aysa.__version__})
-        cmd.parse()
+        cmd = TopLevelCommand({'version': __version__})
+        cmd()
     except KeyboardInterrupt:
         log.error("Aborting.")
     except NoSuchCommand:
