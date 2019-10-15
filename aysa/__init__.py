@@ -25,13 +25,14 @@ __all__ = [
     '__copyright__',
     'json',
     'WIN',
+    'EMPTY',
     'SEGMENT',
     'VERSION'
 ]
 
 # const
 WIN = os.name == 'nt'
-SETTINGS_FILE = '~/.aysa/docker.yml'
+EMPTY = object()
 
 # version
 SEGMENT = 'dev'

@@ -4,6 +4,7 @@
 # ~
 
 import sys
+from aysa import EMPTY
 from inspect import getdoc
 from functools import lru_cache
 from docopt import docopt, DocoptExit
@@ -20,6 +21,10 @@ def docopt_helper(docstring, *args, **kwargs):
         raise SystemExit(docstring)
 
 
+def docstring_helper(value):
+    return '\n%s\n\n' % getdoc(value)
+
+
 class Command:
     def __init__(self, command, options=None, **kwargs):
         self.command = command
@@ -27,36 +32,36 @@ class Command:
         self.options.setdefault('options_first', True)
         self.parent = kwargs.pop('parent', None)
 
-    @property
-    def is_toplevel(self):
-        return self.command is None
+    def parse(self, argv=EMPTY, *args, **kwargs):
+        if argv is EMPTY:
+            argv = sys.argv[1:]
 
-    @lru_cache()
-    def get_doc(self):
-        return getdoc(self) + '\n'
-
-    def get_docopt(self, *args, **kwargs):
-        return docopt_helper(self.get_doc(), *args, **kwargs)
-
-    def parse(self, argv, *args, **kwargs):
-        options = self.get_docopt(argv, *args, **kwargs)
+        kwargs.update(self.options)
+        docstring = docstring_helper(self)
+        options = docopt_helper(docstring, argv, *args, **kwargs)
         command = options[CONST_COMMAND]
 
-        if command is None or not hasattr(self, command):
-            raise SystemExit(self.get_doc())
+        if not hasattr(self, command):
+            raise NoSuchCommand(command)
 
-        getattr(self, command)(options)
+        handler = getattr(self, command)
+        handler_docs = docstring_helper(handler)
+        handler_opts = docopt_helper(handler_docs, options['ARGS'], 
+                                     options_first=True)
+        print(handler_opts)
 
-    def __call__(self, argv, *args, **kwargs):
+    def __call__(self, argv=None, *args, **kwargs):
         return self.parse(argv, *args, **kwargs)
 
     def __enter__(self, *args, **kwargs):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type is SystemExit:
+        exit_code = 0
+        if exc_val is not None:
+            exit_code = 1
             print(exc_val)
-        sys.exit()
+        sys.exit(exit_code)
 
 
 class NoSuchCommand(Exception):
