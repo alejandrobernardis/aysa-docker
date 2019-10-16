@@ -34,6 +34,17 @@ class Command:
         self.options.setdefault('options_first', True)
         self.parent = kwargs.pop('parent', None)
 
+    def top_level(self):
+        value = None
+        while 1:
+            if value is None:
+                value = self.parent
+            elif value.parent is not None:
+                value = value.parent
+            else:
+                break
+        return value
+
     def parse(self, argv=None, *args, **kwargs):
         # principal
         kwargs.update(self.options)

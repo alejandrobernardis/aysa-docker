@@ -82,7 +82,7 @@ class TagCommand(Command):
         Opciones:
             -v, --verbose       Activa el modo `verbose`.
         """
-        print(kwargs)
+        print(kwargs, self.top_level().options)
 
     def add(self, **kwargs):
         """

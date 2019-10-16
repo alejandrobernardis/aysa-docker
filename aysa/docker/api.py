@@ -69,14 +69,14 @@ class Entity:
 
     def set_url(self, **kwargs):
         if self.url_template is None:
-            raise RegistryError('Método no soportado para la entidad: {}.'
+            raise RegistryError('Método no soportado para la entidad: "{}".'
                                 .format(self.__class__.__name__))
         self.url = self.url_template.format(**kwargs)
 
     def request(self, method, *args, jsonr=False, **kwargs):
         method = method.upper()
         if self.methods_supported and method not in self.methods_supported:
-            raise RegistryError('Método "{}" no soportado para {}.'
+            raise RegistryError('Método "{}" no soportado para "{}".'
                                 .format(method, self.url))
         url = self.client.get_baseurl() + self.url
         response = self.client.request(method, url, *args, **kwargs)
@@ -94,8 +94,8 @@ class IterEntity(Entity):
     def get(self, *args, **kwargs):
         response_data = self.request('GET', *args, **kwargs).json()
         if self.response_key not in response_data:
-            raise RegistryError('La clave "{}" no se encuentra dentro del '
-                                'resultado.'.format(self.response_key))
+            raise RegistryError('La clave "{}" no se encuentra dentro de la '
+                                'rspuesta.'.format(self.response_key))
         self.response_data = response_data[self.response_key]
 
     def __iter__(self):
