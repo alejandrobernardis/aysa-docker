@@ -18,7 +18,7 @@ def docopt_helper(docstring, *args, **kwargs):
     try:
         if not isinstance(docstring, str):
             docstring = docstring_helper(docstring)
-        return docopt(docstring, *args, **kwargs)
+        return docopt(docstring, *args, **kwargs), docstring
     except DocoptExit:
         raise SystemExit(docstring)
 
@@ -46,23 +46,26 @@ class Command:
         return value
 
     def parse(self, argv=None, *args, **kwargs):
-        # principal
-        kwargs.update(self.options)
-        options = docopt_helper(self, argv, *args, **kwargs)
-        _command = options.pop(CONST_COMMAND)
-        _arguments = options.pop(CONST_ARGS)
-        self.options.update(options)
+        opt, doc = docopt_helper(self, argv, *args, **self.options, **kwargs)
+        cmd = opt.pop(CONST_COMMAND)
+        arg = opt.pop(CONST_ARGS)
 
-        # secundario
-        handler = self.find_command(_command)
-        handler_opts = docopt_helper(handler, _arguments, options_first=True)
-        handler(**{k.lower(): v for k, v in handler_opts.items()})
+        if cmd is None:
+            raise SystemExit(doc)
+
+        self.options.update(opt)
+
+        hdr = self.find_command(cmd)
+        hdr_opt, hdr_doc = docopt_helper(hdr, arg)
+        print(hdr, hdr_opt)
+        # handler(**{k.lower(): v for k, v in handler_opts.items()})
 
     def execute(self, command, args=None, **kwargs):
-        kwargs.setdefault('options_first', True)
-        handler = self.find_command(command)
-        options = docopt_helper(handler, args, **kwargs)
-        handler(**options)
+        # kwargs.setdefault('options_first', True)
+        # handler = self.find_command(command)
+        # options = docopt_helper(handler, args, **kwargs)
+        # handler(**options)
+        pass
 
     def find_command(self, command):
         if command is None or not hasattr(self, command):

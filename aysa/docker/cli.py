@@ -37,7 +37,7 @@ class TopLevelCommand(Command):
         tag         Administra los `tags` del `repositorio`.
         make        Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
 
-    * Utilice `aysa COMMAND (-h|--help)` para ver la `ayuda` especifica del comando.
+    > Utilice `aysa COMMAND (-h|--help)` para ver la `ayuda` especifica del comando.
     """
     def __init__(self, options=None, **kwargs):
         super().__init__(None, options, **kwargs)

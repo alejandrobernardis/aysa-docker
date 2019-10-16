@@ -18,7 +18,8 @@ MEDIA_TYPES = {
     'v2f': 'application/vnd.docker.distribution.manifest.list.v2+json'
 }
 
-rx_registry = re.compile(r'\w+((\.\w+)+)?(?::\d{1,5})?\/', re.I)
+rx_registry = re.compile(r'^[\w\-_]+((\.[\w\-_]+)+)?(?::\d{1,5})?\/', re.I)
+rx_repository = re.compile(r'^[a-z0-9]+(?:[._-][a-z0-9]+)*$')
 
 
 def get_media_type(value=MANIFEST_VERSION, obj=True):
@@ -205,14 +206,12 @@ class Manifest(Entity):
 
 class FatManifest(Manifest):
     methods_supported = 'GET'
-    response_data = None
 
     def request(self, method, *args, **kwargs):
         headers = kwargs.pop('headers', {})
         headers.update(get_media_type('v2f'))
         kwargs['headers'] = headers
-        self.response_data = super().request(method, *args, **kwargs)
-        return self.response_data
+        return super().request(method, *args, **kwargs)
 
 
 class Api:
@@ -247,13 +246,13 @@ class Api:
         return FatManifest(self.registry, name, reference).json('GET')
 
     def get_manifest(self, name, reference):
-        return self._manifest(name, reference).request('GET')
+        return self._manifest(name, reference).json('GET')
 
     def put_manifest(self, name, reference):
-        return self._manifest(name, reference).request('PUT')
+        return self._manifest(name, reference).json('PUT')
 
     def del_manifest(self, name, reference):
-        return self._manifest(name, reference).request('DELETE')
+        return self._manifest(name, reference).json('DELETE')
 
 
 class RegistryError(Exception):
