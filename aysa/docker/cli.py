@@ -31,6 +31,7 @@ class TopLevelCommand(Command):
         -E, --env=filename            Archivo de configuración del entorno (`.reg`).
         -X, --proxy config            Configuración del `proxy` en una sola línea:
                                       `<protocol>://<username>:<password>@<host>:<port>`
+        -v, --verbose                 Activa el modo `verbose`.
 
     Comandos disponibles:
         tag         Administra los `tags` del `repositorio`.
@@ -54,7 +55,7 @@ class TopLevelCommand(Command):
         """
         TagCommand(kwargs, parent=self).execute(**kwargs)
 
-    def make(self):
+    def make(self, **kwargs):
         """
         Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
 
@@ -77,19 +78,16 @@ class TagCommand(Command):
         Lista los `tags` existentes en el repositorio.
 
         Usage:
-            ls [options] [ARGS ...]
-
-        Opciones:
-            -v, --verbose       Activa el modo `verbose`.
+            ls [options] [IMAGE...]
         """
-        print(kwargs, self.top_level().options)
+        print(kwargs)
 
     def add(self, **kwargs):
         """
         Crea un nuevo `tag` a partir de otro existente.
 
         Usage:
-            add [options] [ARGS ...]
+            add SOURCE_IMAGE_TAG TARGET_TAG
         """
         print(kwargs)
 
@@ -98,7 +96,10 @@ class TagCommand(Command):
         Elimina un `tag` existente.
 
         Usage:
-            delete [options] [ARGS ...]
+            delete [options] IMAGE_TAG [IMAGE_TAG...]
+
+        Opciones:
+            -y, --yes       Responde "SI" a todas las preguntas.
         """
         print(kwargs)
 

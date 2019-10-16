@@ -24,7 +24,7 @@ def docopt_helper(docstring, *args, **kwargs):
 
 
 def docstring_helper(value):
-    return '\n%s\n\n' % getdoc(value)
+    return '\n%s\n' % getdoc(value)
 
 
 class Command:

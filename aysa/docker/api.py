@@ -7,6 +7,55 @@ import re
 import requests
 from requests.auth import HTTPBasicAuth
 
+# {registry:port}/{namespace}/{repository}:{tag}
+TAG_SEP = ':'
+REPO_SEP = '/'
+
+rx_registry = re.compile(r'\w+((\.\w+)+)?(?::\d{1,5})?\/', re.I)
+
+
+def remove_registry(value):
+    registry = get_registry(value)
+    if registry is not None:
+        value = value.replace(registry, '')
+    return value
+
+
+def get_tag(value):
+    return remove_registry(value).rsplit(TAG_SEP, 1)[-1]
+
+
+def get_repository(value):
+    return remove_registry(value).rsplit(TAG_SEP, 1)[0]
+
+
+def get_namespace(value):
+    value = get_repository(value)
+    if REPO_SEP not in value:
+        return None
+    return value.rsplit(REPO_SEP, 1)[0]
+
+
+def get_image(value):
+    return get_repository(value).rsplit(REPO_SEP, 1)[-1]
+
+
+def get_registry(value):
+    r = rx_registry.match(value)
+    if r is not None:
+        return r.group()
+    return None
+
+
+def get_parts(value):
+    return {
+        'registry': get_registry(value),
+        'repository': get_repository(value),
+        'namespace': get_namespace(value),
+        'image': get_image(value),
+        'tag': get_tag(value),
+    }
+
 
 def scheme(endpoint):
   if re.match(r'(localhost|.*\.local(?:host)?(?::\d{1,5})?)$', endpoint):
@@ -99,6 +148,8 @@ class IterEntity(Entity):
         self.response_data = response_data[self.response_key]
 
     def __iter__(self):
+        # TODO(i0608156): Evaluar la implementación de un paginador.
+
         if self.response_data is None:
             self.get()
 
@@ -153,6 +204,10 @@ class Api:
 
     def manifest(self, name, reference):
         return Manifest(self.registry, name, reference)
+
+    def digest(self, name, reference):
+        response = self.manifest(name, reference).request('GET')
+        return response.headers.get('Docker-Content-Digest', None)
 
     def get_manifest(self, name, reference):
         return self.manifest(name, reference).request('GET')
