@@ -10,8 +10,20 @@ from requests.auth import HTTPBasicAuth
 # {registry:port}/{namespace}/{repository}:{tag}
 TAG_SEP = ':'
 REPO_SEP = '/'
+MANIFEST_VERSION = 'v2'
+
+MEDIA_TYPES = {
+    'v1' : 'application/vnd.docker.distribution.manifest.v1+json',
+    'v2' : 'application/vnd.docker.distribution.manifest.v2+json',
+    'v2f': 'application/vnd.docker.distribution.manifest.list.v2+json'
+}
 
 rx_registry = re.compile(r'\w+((\.\w+)+)?(?::\d{1,5})?\/', re.I)
+
+
+def get_media_type(value=MANIFEST_VERSION, obj=True):
+    value = MEDIA_TYPES[value if value in MEDIA_TYPES else MANIFEST_VERSION]
+    return {'Accept': value} if obj is True else value
 
 
 def remove_registry(value):
@@ -57,6 +69,10 @@ def get_parts(value):
     }
 
 
+def validate_token(value, exclude='|#@'):
+    return value and ''.join([x for x in value if x not in exclude]) == value
+
+
 def scheme(endpoint):
   if re.match(r'(localhost|.*\.local(?:host)?(?::\d{1,5})?)$', endpoint):
     return 'http'
@@ -88,14 +104,13 @@ class Registry:
         if self.credentials is not None:
             s.auth = HTTPBasicAuth(*self.get_credentials(True))
         s.headers.update(headers or {})
-        s.headers['Accept'] = 'application/vnd.docker.distribution.manifest' \
-                              '.v2+json'
         s.verify = self.verify
         s.timeout = timeout
         return s
 
     def request(self, method, *args, **kwargs):
-        headers = kwargs.pop('headers', None)
+        headers = kwargs.pop('headers', {})
+        headers.setdefault('Accept', get_media_type(obj=False))
         with self.session(headers) as req:
             response = req.request(method, *args, **kwargs)
             try:
@@ -118,18 +133,22 @@ class Entity:
 
     def set_url(self, **kwargs):
         if self.url_template is None:
-            raise RegistryError('Método no soportado para la entidad: "{}".'
+            raise RegistryError('Método "set_url" no está soportado '
+                                'para la entidad: "{}".'
                                 .format(self.__class__.__name__))
         self.url = self.url_template.format(**kwargs)
 
-    def request(self, method, *args, jsonr=False, **kwargs):
+    def request(self, method, *args, **kwargs):
         method = method.upper()
         if self.methods_supported and method not in self.methods_supported:
             raise RegistryError('Método "{}" no soportado para "{}".'
                                 .format(method, self.url))
         url = self.client.get_baseurl() + self.url
         response = self.client.request(method, url, *args, **kwargs)
-        return response if jsonr is False else response.json()
+        return response
+
+    def json(self, method, *args, **kwargs):
+        return self.request(method,*args, **kwargs).json()
 
 
 class IterEntity(Entity):
@@ -184,6 +203,18 @@ class Manifest(Entity):
         self.set_url(name=name, reference=reference)
 
 
+class FatManifest(Manifest):
+    methods_supported = 'GET'
+    response_data = None
+
+    def request(self, method, *args, **kwargs):
+        headers = kwargs.pop('headers', {})
+        headers.update(get_media_type('v2f'))
+        kwargs['headers'] = headers
+        self.response_data = super().request(method, *args, **kwargs)
+        return self.response_data
+
+
 class Api:
     """
     opt = dict(insecure=True, credentials='dashboard:dashboard')
@@ -202,21 +233,27 @@ class Api:
     def tags(self, name):
         return Tags(self.registry, name)
 
-    def manifest(self, name, reference):
-        return Manifest(self.registry, name, reference)
-
     def digest(self, name, reference):
-        response = self.manifest(name, reference).request('GET')
+        response = self.get_manifest(name, reference)
         return response.headers.get('Docker-Content-Digest', None)
 
+    def _manifest(self, name, reference):
+        return Manifest(self.registry, name, reference)
+
+    def manifest(self, name, reference):
+        return self._manifest(name, reference).json('GET')
+
+    def fat_manifest(self, name, reference):
+        return FatManifest(self.registry, name, reference).json('GET')
+
     def get_manifest(self, name, reference):
-        return self.manifest(name, reference).request('GET')
+        return self._manifest(name, reference).request('GET')
 
     def put_manifest(self, name, reference):
-        return self.manifest(name, reference).request('PUT')
+        return self._manifest(name, reference).request('PUT')
 
-    def delete_manifest(self, name, reference):
-        return self.manifest(name, reference).request('DELETE')
+    def del_manifest(self, name, reference):
+        return self._manifest(name, reference).request('DELETE')
 
 
 class RegistryError(Exception):
