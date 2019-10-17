@@ -25,7 +25,7 @@ def docopt_helper(docstring, *args, **kwargs):
 
 class AttrDict(dict):
     def __init__(self, *args, **kwargs):
-        super(AttrDict, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.__dict__ = self
 
 
@@ -48,7 +48,9 @@ def env_helper(filename=None):
     if parser.read(filepath, encoding='utf-8'):
         return parser
     raise SystemExit('Es necesario definir el archivo "~/.aysa/config.ini", '
-                     'con las configuración de los diferentes "endpoints".')
+                     'con las configuración de los diferentes "endpoints": '
+                     '`registry`, `development` y `quality`'.
+)
 
 
 class Command:
