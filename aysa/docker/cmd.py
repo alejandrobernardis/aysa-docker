@@ -4,11 +4,11 @@
 # ~
 
 import sys
-from aysa import EMPTY
-from inspect import getdoc
-from functools import lru_cache
 from docopt import docopt, DocoptExit
-
+from inspect import getdoc, isclass
+from functools import lru_cache
+from pathlib import Path
+from configparser import ConfigParser, ExtendedInterpolation
 
 CONST_COMMAND = 'COMMAND'
 CONST_ARGS = 'ARGS'
@@ -23,17 +23,49 @@ def docopt_helper(docstring, *args, **kwargs):
         raise SystemExit(docstring)
 
 
+class AttrDict(dict):
+    def __init__(self, *args, **kwargs):
+        super(AttrDict, self).__init__(*args, **kwargs)
+        self.__dict__ = self
+
+
+class ConfigObject(ConfigParser):
+    def to_dict(self):
+        result = {}
+        for sk, sv in self.items():
+            if sk == 'common':
+                continue
+            for svk, svv in sv.items():
+                if sk not in result:
+                    result[sk] = AttrDict()
+                result[sk][svk] = svv
+        return AttrDict(result)
+
+
+def env_helper(filename=None):
+    filepath = Path(filename or '~/.aysa/config.ini').expanduser()
+    parser = ConfigObject(interpolation=ExtendedInterpolation())
+    if parser.read(filepath, encoding='utf-8'):
+        return parser
+    raise SystemExit('Es necesario definir el archivo "~/.aysa/config.ini", '
+                     'con las configuración de los diferentes "endpoints".')
+
+
 class Command:
     def __init__(self, command, options=None, **kwargs):
         self.command = command
         self.options = options or {}
         self.options.setdefault('options_first', True)
         self.parent = kwargs.pop('parent', None)
+        self._env = None
 
+    @property
     def top_level(self):
         value = None
         while 1:
-            if value is None:
+            if self.parent is None:
+                return self
+            elif value is None:
                 value = self.parent
             elif value.parent is not None:
                 value = value.parent
@@ -41,20 +73,25 @@ class Command:
                 break
         return value
 
-    def top_level_options(self):
-        return self.top_level().options
+    @property
+    def global_options(self):
+        return self.top_level.options
 
     @property
     def debug(self):
-        return self.top_level_options().get('--debug', False)
+        return self.global_options.get('--debug', False)
 
     @property
     def verbose(self):
-        return self.top_level_options().get('--verbose', False)
+        return self.global_options.get('--verbose', False)
+
+    @property
+    def env_file(self):
+        return self.global_options.get('--env', None)
 
     @property
     def env(self):
-        return {}
+        return self.top_level._env
 
     def parse(self, argv=None, *args, **kwargs):
         opt, doc = docopt_helper(self, argv, *args, **self.options, **kwargs)
@@ -64,12 +101,17 @@ class Command:
 
         if cmd is None:
             raise SystemExit(doc)
-        
+
         hdr = self.find_command(cmd)
         hdr_opt, hdr_doc = docopt_helper(hdr, arg)
         hdr_opt = {k.lower(): v for k, v in hdr_opt.items()}
         hdr_opt.update({'global_args': self.options})
-        hdr(hdr_opt)
+        self._env = env_helper(self.env_file).to_dict()
+
+        if isclass(hdr):
+            hdr(cmd, hdr_opt, parent=self).execute(**hdr_opt)
+        else:
+            hdr(hdr_opt)
 
     def execute(self, command, args=None, global_args=None, **kwargs):
         hdr = self.find_command(command)
@@ -77,9 +119,13 @@ class Command:
         hdr(**hdr_opt, global_args=global_args)
 
     def find_command(self, command):
-        if command is None or not hasattr(self, command):
-            raise NoSuchCommand(command)
-        return getattr(self, command)
+        try:
+            if hasattr(self, 'commands'):
+                return getattr(self, 'commands')[command]
+            return getattr(self, command)
+        except:
+            pass
+        raise NoSuchCommand(command)
 
     def __call__(self, argv=None, *args, **kwargs):
         return self.parse(argv, *args, **kwargs)

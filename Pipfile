@@ -8,6 +8,7 @@ verify_ssl = false
 [packages]
 requests = "*"
 docopt = "*"
+configobj = "*"
 
 [requires]
 python_version = "3.7"

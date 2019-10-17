@@ -18,8 +18,9 @@ MEDIA_TYPES = {
     'v2f': 'application/vnd.docker.distribution.manifest.list.v2+json'
 }
 
-rx_registry = re.compile(r'^[\w\-_]+((\.[\w\-_]+)+)?(?::\d{1,5})?\/', re.I)
-rx_repository = re.compile(r'^[a-z0-9]+(?:[._-][a-z0-9]+)*$')
+rx_registry = re.compile(r'^(localhost|[\w\-]+(\.[\w\-]+)+)(?::\d{1,5})?\/', re.I)
+rx_repository = re.compile(r'^[a-z0-9]+(?:[/:._-][a-z0-9]+)*$')
+rx_schema = re.compile(r'(localhost|.*\.local(?:host)?(?::\d{1,5})?)$', re.I)
 
 
 def get_media_type(value=MANIFEST_VERSION, obj=True):
@@ -35,6 +36,8 @@ def remove_registry(value):
 
 
 def get_tag(value):
+    if TAG_SEP not in value:
+        return None
     return remove_registry(value).rsplit(TAG_SEP, 1)[-1]
 
 
@@ -61,6 +64,9 @@ def get_registry(value):
 
 
 def get_parts(value):
+    if not rx_repository.match(get_repository(value)):
+        raise RegistryError('El endpoint "{}" está mal formateado.'
+                            .format(value))
     return {
         'registry': get_registry(value),
         'repository': get_repository(value),
@@ -75,7 +81,7 @@ def validate_token(value, exclude='|#@'):
 
 
 def scheme(endpoint):
-  if re.match(r'(localhost|.*\.local(?:host)?(?::\d{1,5})?)$', endpoint):
+  if rx_schema.match(endpoint):
     return 'http'
   else:
     return 'https'
@@ -85,7 +91,8 @@ class Registry:
     """
     Registry Client (simple)
     """
-    def __init__(self, host, insecure=False, verify=True, credentials=None):
+    def __init__(self, host, insecure=False, verify=True, credentials=None,
+                 **kwargs):
         self.host = host
         self.insecure = insecure
         self.verify = verify if insecure is False else True
@@ -222,7 +229,8 @@ class Api:
         for y in api.tags(x):
             print(x, y)
     """
-    def __init__(self, host, insecure=False, verify=True, credentials=None):
+    def __init__(self, host, insecure=False, verify=True, credentials=None,
+                 **kwargs):
         self.registry = Registry(host, insecure, verify, credentials)
 
     def catalog(self):
@@ -252,6 +260,39 @@ class Api:
 
     def del_manifest(self, name, reference):
         return self._manifest(name, reference).json('DELETE')
+
+
+class Image:
+    registry = None
+    repository = None
+    namespace = None
+    image = None
+    tag = None
+
+    def __init__(self, value):
+        for k, v in get_parts(value).items():
+            setattr(self, k, v)
+
+    @property
+    def image_tag(self):
+        return '{}:{}'.format(self.repository, self.tag)
+
+    @property
+    def full(self):
+        return '{}{}:{}'.format(self.registry, self.repository, self.tag)
+
+    def __str__(self):
+        return '<Namespace="{}" Image="{}" Tag="{}">'\
+               .format(self.namespace or '', self.image or '', self.tag or '')
+
+    def __repr__(self):
+        return self.image
+
+    def __lt__(self, other):
+        return self.image < other.image
+
+    def __gt__(self, other):
+        return self.image > other.image
 
 
 class RegistryError(Exception):

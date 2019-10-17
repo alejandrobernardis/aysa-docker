@@ -7,65 +7,13 @@
 import sys
 import logging
 from aysa import __version__
-from aysa.docker.api import Registry, Api
+from aysa.docker.api import Registry, Api, Image, get_parts
 from aysa.docker.cmd import NoSuchCommand, Command
+
 
 # logger
 log = logging.getLogger(__name__)
 console_handler = logging.StreamHandler(sys.stderr)
-
-
-# top level command
-class TopLevelCommand(Command):
-    """
-    AySA, Utilidad para la gestión de despliegues en `docker`.
-
-    Usage: aysa [options] COMMAND [ARGS...]
-
-    Opciones:
-        -h, --help                     Muestra la `ayuda` del programa.
-        -v, --version                  Muestra la `versión` del programa.
-        -D, --debug                    Activa el modo `debug`.
-        -O, --debug-output=filename    Archivo de salida para el modo `debug`.
-        -E, --env=filename             Archivo de configuración del entorno (`.reg`).
-        -X, --proxy config             Configuración del `proxy` en una sola línea:
-                                       `<protocol>://<username>:<password>@<host>:<port>`
-        -V, --verbose                  Activa el modo `verbose`.
-
-    Comandos disponibles:
-        tag     Administra los `tags` del `repositorio`.
-        make    Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
-
-    > Utilice `aysa COMMAND (-h|--help)` para ver la `ayuda` especifica del comando.
-    """
-    def __init__(self, options=None, **kwargs):
-        super().__init__('aysa', options, **kwargs)
-
-    def tag(self, options):
-        """
-        Administra los `tags` para el despliegue de los servicios.
-
-        Usage: tag COMMAND [ARGS ...]
-
-        Comandos disponibles:
-            ls        Lista los `tags` diponibles en el `repositorio`.
-            add       Crea un nuevo `tag` a partir de otro existente.
-            delete    Elimina un `tag` existente.
-
-        """
-        TagCommand('tag', options, parent=self).execute(**options)
-
-    def make(self, options):
-        """
-        Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
-
-        Usage:  make COMMAND [ARGS ...]
-
-        Comandos disponibles:
-            test    Crea las `imágenes` para el entorno de `QA/TESTING`.
-            prod    Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
-        """
-        MakeCommand('make', options, parent=self).execute(**options)
 
 
 class RegistryCommand(Command):
@@ -74,8 +22,38 @@ class RegistryCommand(Command):
     @property
     def api(self):
         if self._registry_api is None:
-            self._registry_api = Api(**self.env)
+            self._registry_api = Api(**self.env.registry)
         return self._registry_api
+
+    @property
+    def namespace(self):
+        return self.env.registry.namespace
+
+    def _fix_image_name(self, value, namespace=None):
+        value = value.strip()
+        namespace = namespace or self.namespace
+        return namespace + value if not value.startswith(namespace) else value
+
+    def _fix_images_list(self, values, namespace=None):
+        return [self._fix_image_name(x, namespace) for x in values.split(',')]
+
+    def _fix_tags_list(self, values, namespace=None):
+        return [self._fix_image_name(x, namespace) for x in values.split(',')]
+
+    def _list(self, filter_repos=None, filter_tags='*'):
+        for x in self.api.catalog():
+            if (self.namespace and not x.startswith(self.namespace)) \
+                    or (filter_repos and
+                        x not in self._fix_images_list(filter_repos)):
+                continue
+            if filter_tags:
+                for y in self.api.tags(x):
+                    if filter_tags != '*' and \
+                            y not in self._fix_tags_list(filter_tags):
+                        continue
+                    yield Image('{}:{}'.format(x, y))
+            else:
+                yield Image(x)
 
 
 class TagCommand(RegistryCommand):
@@ -96,7 +74,8 @@ class TagCommand(RegistryCommand):
 
         Usage: ls [options] [IMAGE...]
         """
-        print(kwargs)
+        for x in self._list():
+            print(x)
 
     def add(self, **kwargs):
         """
@@ -149,6 +128,40 @@ class MakeCommand(RegistryCommand):
             -y, --yes    Responde "SI" a todas las preguntas.
         """
         print(kwargs)
+
+
+# top level command
+class TopLevelCommand(Command):
+    """
+    AySA, Utilidad para la gestión de despliegues en `docker`.
+
+    Usage: aysa [options] COMMAND [ARGS...]
+
+    Opciones:
+        -h, --help                     Muestra la `ayuda` del programa.
+        -v, --version                  Muestra la `versión` del programa.
+        -D, --debug                    Activa el modo `debug`.
+        -O, --debug-output=filename    Archivo de salida para el modo `debug`.
+        -E, --env=filename             Archivo de configuración del entorno (`.ini`),
+                                       el mismo será buscado en la siguiente ruta
+                                       de no ser definido: `~/.aysa/config.ini`.
+        -X, --proxy config             Configuración del `proxy` en una sola línea:
+                                       `<protocol>://<username>:<password>@<host>:<port>`
+        -V, --verbose                  Activa el modo `verbose`.
+
+    Comandos disponibles:
+        tag     Administra los `tags` del `repositorio`.
+        make    Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
+
+    > Utilice `aysa COMMAND (-h|--help)` para ver la `ayuda` especifica del comando.
+    """
+    def __init__(self, options=None, **kwargs):
+        super().__init__('aysa', options, **kwargs)
+
+    commands = {
+        'tag': TagCommand,
+        'make': MakeCommand
+    }
 
 
 def main():
