@@ -7,7 +7,7 @@
 import sys
 import logging
 from aysa import __version__
-from aysa.docker.api import Registry
+from aysa.docker.api import Registry, Api
 from aysa.docker.cmd import NoSuchCommand, Command
 
 # logger
@@ -20,67 +20,81 @@ class TopLevelCommand(Command):
     """
     AySA, Utilidad para la gestión de despliegues en `docker`.
 
-    Usage:
-        aysa [options] COMMAND [ARGS...]
+    Usage: aysa [options] COMMAND [ARGS...]
 
     Opciones:
-        -h, --help                    Muestra la `ayuda` del programa.
-        -v, --version                 Muestra la `versión` del programa.
-        -D, --debug                   Activa el modo `debug`.
-        -O, --debug-output=filename   Archivo de salida para el modo `debug`.
-        -E, --env=filename            Archivo de configuración del entorno (`.reg`).
-        -X, --proxy config            Configuración del `proxy` en una sola línea:
-                                      `<protocol>://<username>:<password>@<host>:<port>`
-        -V, --verbose                 Activa el modo `verbose`.
+        -h, --help                     Muestra la `ayuda` del programa.
+        -v, --version                  Muestra la `versión` del programa.
+        -D, --debug                    Activa el modo `debug`.
+        -O, --debug-output=filename    Archivo de salida para el modo `debug`.
+        -E, --env=filename             Archivo de configuración del entorno (`.reg`).
+        -X, --proxy config             Configuración del `proxy` en una sola línea:
+                                       `<protocol>://<username>:<password>@<host>:<port>`
+        -V, --verbose                  Activa el modo `verbose`.
 
     Comandos disponibles:
-        tag         Administra los `tags` del `repositorio`.
-        make        Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
+        tag     Administra los `tags` del `repositorio`.
+        make    Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
 
     > Utilice `aysa COMMAND (-h|--help)` para ver la `ayuda` especifica del comando.
     """
     def __init__(self, options=None, **kwargs):
-        super().__init__(None, options, **kwargs)
+        super().__init__('aysa', options, **kwargs)
 
-    def tag(self, **kwargs):
+    def tag(self, options):
         """
         Administra los `tags` para el despliegue de los servicios.
 
-        Usage:
-            tag COMMAND [ARGS ...]
+        Usage: tag COMMAND [ARGS ...]
 
         Comandos disponibles:
-            ls          Lista los `tags` diponibles en el `repositorio`.
-            add         Crea un nuevo `tag` a partir de otro existente.
-            delete      Elimina un `tag` existente.
+            ls        Lista los `tags` diponibles en el `repositorio`.
+            add       Crea un nuevo `tag` a partir de otro existente.
+            delete    Elimina un `tag` existente.
 
         """
-        TagCommand(kwargs, parent=self).execute(**kwargs)
+        TagCommand('tag', options, parent=self).execute(**options)
 
-    def make(self, **kwargs):
+    def make(self, options):
         """
         Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
 
-        Usage:
-            make COMMAND [ARGS ...]
+        Usage:  make COMMAND [ARGS ...]
 
         Comandos disponibles:
             test    Crea las `imágenes` para el entorno de `QA/TESTING`.
             prod    Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
         """
-        MakeCommand(kwargs, parent=self).execute(**kwargs)
+        MakeCommand('make', options, parent=self).execute(**options)
 
 
-class TagCommand(Command):
-    def __init__(self, options=None, **kwargs):
-        super().__init__(self.__class__.__name__, options, **kwargs)
+class RegistryCommand(Command):
+    _registry_api = None
 
+    @property
+    def api(self):
+        if self._registry_api is None:
+            self._registry_api = Api(**self.env)
+        return self._registry_api
+
+
+class TagCommand(RegistryCommand):
+    """
+    Administra los `tags` para el despliegue de los servicios.
+
+    Usage: tag COMMAND [ARGS ...]
+
+    Comandos disponibles:
+        ls        Lista los `tags` diponibles en el `repositorio`.
+        add       Crea un nuevo `tag` a partir de otro existente.
+        delete    Elimina un `tag` existente.
+
+    """
     def ls(self, **kwargs):
         """
         Lista los `tags` existentes en el repositorio.
 
-        Usage:
-            ls [options] [IMAGE...]
+        Usage: ls [options] [IMAGE...]
         """
         print(kwargs)
 
@@ -88,8 +102,7 @@ class TagCommand(Command):
         """
         Crea un nuevo `tag` a partir de otro existente.
 
-        Usage:
-            add SOURCE_IMAGE_TAG TARGET_TAG
+        Usage: add SOURCE_IMAGE_TAG TARGET_TAG
         """
         print(kwargs)
 
@@ -97,25 +110,32 @@ class TagCommand(Command):
         """
         Elimina un `tag` existente.
 
-        Usage:
-            delete [options] IMAGE_TAG [IMAGE_TAG...]
+        Usage: delete [options] IMAGE_TAG [IMAGE_TAG...]
 
         Opciones:
-            -y, --yes       Responde "SI" a todas las preguntas.
+            -y, --yes    Responde "SI" a todas las preguntas.
         """
         print(kwargs)
 
 
-class MakeCommand(Command):
+class MakeCommand(RegistryCommand):
+    """
+    Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
+
+    Usage:  make COMMAND [ARGS ...]
+
+    Comandos disponibles:
+        test    Crea las `imágenes` para el entorno de `QA/TESTING`.
+        prod    Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
+    """
     def test(self, **kwargs):
         """
         Crea las `imágenes` para el entorno de `QA/TESTING`.
 
-        Usage:
-            test [options]
+        Usage: test [options]
 
         Opciones:
-            -y, --yes       Responde "SI" a todas las preguntas.
+            -y, --yes    Responde "SI" a todas las preguntas.
         """
         print(kwargs)
 
@@ -123,11 +143,10 @@ class MakeCommand(Command):
         """
         Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
 
-        Usage:
-            prod [options]
+        Usage: prod [options]
 
         Opciones:
-            -y, --yes       Responde "SI" a todas las preguntas.
+            -y, --yes    Responde "SI" a todas las preguntas.
         """
         print(kwargs)
 

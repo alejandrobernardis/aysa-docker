@@ -167,9 +167,8 @@ class IterEntity(Entity):
                                 'rspuesta.'.format(self.response_key))
         self.response_data = response_data[self.response_key]
 
+    # TODO(i0608156): Evaluar la implementación de un paginador.
     def __iter__(self):
-        # TODO(i0608156): Evaluar la implementación de un paginador.
-
         if self.response_data is None:
             self.get()
 

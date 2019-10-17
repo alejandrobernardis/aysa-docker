@@ -17,14 +17,10 @@ CONST_ARGS = 'ARGS'
 def docopt_helper(docstring, *args, **kwargs):
     try:
         if not isinstance(docstring, str):
-            docstring = docstring_helper(docstring)
+            docstring = getdoc(docstring)
         return docopt(docstring, *args, **kwargs), docstring
     except DocoptExit:
         raise SystemExit(docstring)
-
-
-def docstring_helper(value):
-    return '\n%s\n' % getdoc(value)
 
 
 class Command:
@@ -45,27 +41,40 @@ class Command:
                 break
         return value
 
+    def top_level_options(self):
+        return self.top_level().options
+
+    @property
+    def debug(self):
+        return self.top_level_options().get('--debug', False)
+
+    @property
+    def verbose(self):
+        return self.top_level_options().get('--verbose', False)
+
+    @property
+    def env(self):
+        return {}
+
     def parse(self, argv=None, *args, **kwargs):
         opt, doc = docopt_helper(self, argv, *args, **self.options, **kwargs)
         cmd = opt.pop(CONST_COMMAND)
         arg = opt.pop(CONST_ARGS)
+        self.options.update(opt)
 
         if cmd is None:
             raise SystemExit(doc)
-
-        self.options.update(opt)
-
+        
         hdr = self.find_command(cmd)
         hdr_opt, hdr_doc = docopt_helper(hdr, arg)
-        print(hdr, hdr_opt)
-        # handler(**{k.lower(): v for k, v in handler_opts.items()})
+        hdr_opt = {k.lower(): v for k, v in hdr_opt.items()}
+        hdr_opt.update({'global_args': self.options})
+        hdr(hdr_opt)
 
-    def execute(self, command, args=None, **kwargs):
-        # kwargs.setdefault('options_first', True)
-        # handler = self.find_command(command)
-        # options = docopt_helper(handler, args, **kwargs)
-        # handler(**options)
-        pass
+    def execute(self, command, args=None, global_args=None, **kwargs):
+        hdr = self.find_command(command)
+        hdr_opt, hdr_doc = docopt_helper(hdr, args, options_first=True)
+        hdr(**hdr_opt, global_args=global_args)
 
     def find_command(self, command):
         if command is None or not hasattr(self, command):
@@ -74,6 +83,9 @@ class Command:
 
     def __call__(self, argv=None, *args, **kwargs):
         return self.parse(argv, *args, **kwargs)
+
+    def __str__(self):
+        return '<Command="{}">'.format(self.command)
 
 
 class NoSuchCommand(Exception):
