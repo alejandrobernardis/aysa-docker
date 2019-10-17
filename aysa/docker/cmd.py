@@ -110,15 +110,13 @@ class Command:
         if isclass(hdr):
             hdr(cmd, parent=self).execute(arg[0], arg[1:], self.options)
 
-        else:
-            hdr_opt, hdr_doc = docopt_helper(hdr, arg)
-            hdr_opt = {k.lower(): v for k, v in hdr_opt.items()}
-            hdr_opt.update({'global_args': self.options})
-            hdr(hdr_opt)
+        else: 
+            self.execute(cmd, arg, self.options)
 
     def execute(self, command, args=None, global_args=None, **kwargs):
         hdr = self.find_command(command)
         hdr_opt, hdr_doc = docopt_helper(hdr, args, options_first=True)
+        hdr_opt = {k.lower(): v for k, v in hdr_opt.items()}
         hdr(**hdr_opt, global_args=global_args)
 
     def find_command(self, command):
