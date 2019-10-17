@@ -104,20 +104,21 @@ class Command:
         if cmd is None:
             raise SystemExit(doc)
 
-        hdr = self.find_command(cmd)
         self._env = env_helper(self.env_file).to_dict()
-
+        hdr = self.find_command(cmd)
+        
         if isclass(hdr):
             hdr(cmd, parent=self).execute(arg[0], arg[1:], self.options)
 
         else: 
-            self.execute(cmd, arg, self.options)
+            self.execute(hdr, arg, self.options)
 
     def execute(self, command, args=None, global_args=None, **kwargs):
-        hdr = self.find_command(command)
-        hdr_opt, hdr_doc = docopt_helper(hdr, args, options_first=True)
+        if isinstance(command, str) or not callable(command):
+            command = self.find_command(command)
+        hdr_opt, hdr_doc = docopt_helper(command, args, options_first=True)
         hdr_opt = {k.lower(): v for k, v in hdr_opt.items()}
-        hdr(**hdr_opt, global_args=global_args)
+        command(**hdr_opt, global_args=global_args)
 
     def find_command(self, command):
         try:
