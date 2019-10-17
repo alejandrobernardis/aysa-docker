@@ -105,13 +105,13 @@ class Command:
             raise SystemExit(doc)
 
         self._env = env_helper(self.env_file).to_dict()
-        hdr = self.find_command(cmd)
+        scmd = self.find_command(cmd)
         
-        if isclass(hdr):
-            hdr(cmd, parent=self).execute(arg[0], arg[1:], self.options)
+        if isclass(scmd):
+            scmd(cmd, parent=self).execute(arg[0], arg[1:], self.options)
 
         else: 
-            self.execute(hdr, arg, self.options)
+            self.execute(scmd, arg, self.options)
 
     def execute(self, command, args=None, global_args=None, **kwargs):
         if isinstance(command, str) or not callable(command):
