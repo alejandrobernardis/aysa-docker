@@ -103,14 +103,15 @@ class Command:
             raise SystemExit(doc)
 
         hdr = self.find_command(cmd)
-        hdr_opt, hdr_doc = docopt_helper(hdr, arg)
-        hdr_opt = {k.lower(): v for k, v in hdr_opt.items()}
-        hdr_opt.update({'global_args': self.options})
         self._env = env_helper(self.env_file).to_dict()
 
         if isclass(hdr):
-            hdr(cmd, hdr_opt, parent=self).execute(**hdr_opt)
+            hdr(cmd, parent=self).execute(arg[0], arg[1:], self.options)
+
         else:
+            hdr_opt, hdr_doc = docopt_helper(hdr, arg)
+            hdr_opt = {k.lower(): v for k, v in hdr_opt.items()}
+            hdr_opt.update({'global_args': self.options})
             hdr(hdr_opt)
 
     def execute(self, command, args=None, global_args=None, **kwargs):

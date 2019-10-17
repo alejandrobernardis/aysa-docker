@@ -32,24 +32,29 @@ class RegistryCommand(Command):
     def _fix_image_name(self, value, namespace=None):
         value = value.strip()
         namespace = namespace or self.namespace
-        return namespace + value if not value.startswith(namespace) else value
+        return '{}/{}'.format(namespace, value) \
+            if not value.startswith(namespace) else value
 
     def _fix_images_list(self, values, namespace=None):
-        return [self._fix_image_name(x, namespace) for x in values.split(',')]
+        values = values.split(',') if isinstance(values, str) else values or []
+        return [self._fix_image_name(x.strip(), namespace) for x in values]
 
-    def _fix_tags_list(self, values, namespace=None):
-        return [self._fix_image_name(x, namespace) for x in values.split(',')]
+    def _fix_tags_list(self, values):
+        if not values or values == '*':
+            return '*'
+        return [x.strip() for x in values.split(',')]
 
-    def _list(self, filter_repos=None, filter_tags='*'):
+    def _list(self, filter_repos=None, filter_tags=None):
+        filter_repos = self._fix_images_list(filter_repos)
+        filter_tags = self._fix_tags_list(filter_tags)
+
         for x in self.api.catalog():
             if (self.namespace and not x.startswith(self.namespace)) \
-                    or (filter_repos and
-                        x not in self._fix_images_list(filter_repos)):
+                    or (filter_repos and x not in filter_repos):
                 continue
             if filter_tags:
                 for y in self.api.tags(x):
-                    if filter_tags != '*' and \
-                            y not in self._fix_tags_list(filter_tags):
+                    if filter_tags != '*' and y not in filter_tags:
                         continue
                     yield Image('{}:{}'.format(x, y))
             else:
@@ -60,22 +65,30 @@ class TagCommand(RegistryCommand):
     """
     Administra los `tags` para el despliegue de los servicios.
 
-    Usage: tag COMMAND [ARGS ...]
+    Usage: tag COMMAND [ARGS...]
 
     Comandos disponibles:
         ls        Lista los `tags` diponibles en el `repositorio`.
         add       Crea un nuevo `tag` a partir de otro existente.
         delete    Elimina un `tag` existente.
-
     """
     def ls(self, **kwargs):
         """
         Lista los `tags` existentes en el repositorio.
 
         Usage: ls [options] [IMAGE...]
+
+        Opciones:
+            -t tags, --filter-tags=tags     Lista de `tags` separados por comas,
+                                            ex: "dev,rc,latest" [default: *]
         """
-        for x in self._list():
-            print(x)
+        import json, pprint
+        for image in self._list(kwargs['IMAGE'], kwargs['--filter-tags']):
+            print(image)
+            if self.verbose:
+                manifest = self.api.fat_manifest(image.repository, image.tag)
+                pprint.pprint(json.loads(manifest['history'][0]['v1Compatibility']))
+
 
     def add(self, **kwargs):
         """
@@ -101,7 +114,7 @@ class MakeCommand(RegistryCommand):
     """
     Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
 
-    Usage:  make COMMAND [ARGS ...]
+    Usage: make COMMAND [ARGS ...]
 
     Comandos disponibles:
         test    Crea las `imágenes` para el entorno de `QA/TESTING`.
@@ -135,19 +148,20 @@ class TopLevelCommand(Command):
     """
     AySA, Utilidad para la gestión de despliegues en `docker`.
 
-    Usage: aysa [options] COMMAND [ARGS...]
+    Usage:
+        aysa [options] COMMAND [ARGS...]
 
     Opciones:
-        -h, --help                     Muestra la `ayuda` del programa.
-        -v, --version                  Muestra la `versión` del programa.
-        -D, --debug                    Activa el modo `debug`.
-        -O, --debug-output=filename    Archivo de salida para el modo `debug`.
-        -E, --env=filename             Archivo de configuración del entorno (`.ini`),
-                                       el mismo será buscado en la siguiente ruta
-                                       de no ser definido: `~/.aysa/config.ini`.
-        -X, --proxy config             Configuración del `proxy` en una sola línea:
-                                       `<protocol>://<username>:<password>@<host>:<port>`
-        -V, --verbose                  Activa el modo `verbose`.
+        -h, --help                              Muestra la `ayuda` del programa.
+        -v, --version                           Muestra la `versión` del programa.
+        -D, --debug                             Activa el modo `debug`.
+        -O filename, --debug-output=filename    Archivo de salida para el modo `debug`.
+        -E filename, --env=filename             Archivo de configuración del entorno (`.ini`),
+                                                el mismo será buscado en la siguiente ruta
+                                                de no ser definido: `~/.aysa/config.ini`.
+        -X config, --proxy=config               Configuración del `proxy` en una sola línea:
+                                                `<protocol>://<username>:<password>@<host>:<port>`
+        -V, --verbose                           Activa el modo `verbose`.
 
     Comandos disponibles:
         tag     Administra los `tags` del `repositorio`.
