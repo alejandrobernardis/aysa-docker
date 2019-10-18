@@ -16,4 +16,3 @@ python_version = "3.7"
 [scripts]
 help = "python -m aysa --help"
 version = "python -m aysa --version"
-tag = "python -m aysa tag"

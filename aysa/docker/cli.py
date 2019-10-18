@@ -90,6 +90,7 @@ class TagCommand(RegistryCommand):
                 pprint.pprint(json.loads(manifest['history'][0]['v1Compatibility']))
 
 
+
     def add(self, **kwargs):
         """
         Crea un nuevo `tag` a partir de otro existente.
@@ -178,15 +179,16 @@ class TopLevelCommand(Command):
 def main():
     try:
         TopLevelCommand({'version': __version__})()
-    
+        sys.exit(0)
+
     except KeyboardInterrupt:
         log.error("Aborting.")
-    
+
     except NoSuchCommand:
         log.error("No such command.")
-    
+
     except Exception as e:
-        log.error(e)
+        pass
 
     sys.exit(1)
 

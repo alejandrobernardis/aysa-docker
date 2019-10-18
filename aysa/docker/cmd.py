@@ -104,31 +104,36 @@ class Command:
         arg = opt.pop(CONST_ARGS)
         self.options.update(opt)
 
-        if cmd is None:
+        try:
+            scmd = self.find_command(cmd)
+            sdoc = getdoc(scmd)
+        except:
             raise SystemExit(doc)
 
-        scmd = self.find_command(cmd)
-        sdoc = getdoc(scmd)
-
-        if not arg:
-            raise SystemExit(sdoc)
-        
-        if isclass(scmd):
-            sargs = arg[1:] if len(arg) > 1 else None
-            scmd(cmd, parent=self).execute(arg[0], sargs, self.options)
-        
-        else: 
-            self.execute(scmd, arg, self.options, parent=self)
+        try:
+            if isclass(scmd):
+                sargs = arg[1:] if len(arg) > 1 else []
+                scmd(cmd, parent=self).execute(arg[0], sargs, self.options)
+            else:
+                self.execute(scmd, arg, self.options, parent=self)
+            return
+        except Exception as e:
+            if isinstance(e, CommandExit):
+                raise e
+        raise SystemExit(sdoc)
 
     def execute(self, command, args=None, global_args=None, **kwargs):
-        if isinstance(command, str) or not callable(command):
+        if isinstance(command, str):
             command = self.find_command(command)
 
         hdr_opt, hdr_doc = docopt_helper(command, args, options_first=True)
         hdr_opt = {k.lower(): v for k, v in hdr_opt.items()}
         self.env = env_helper(self.env_file).to_dict()
 
-        command(**hdr_opt, global_args=global_args)
+        try:
+            command(**hdr_opt, global_args=global_args)
+        except Exception as e:
+            raise CommandExit(hdr_doc)
 
     def find_command(self, command):
         try:
@@ -150,3 +155,9 @@ class NoSuchCommand(Exception):
     def __init__(self, command):
         super().__init__("No such command: %s" % command)
         self.command = command
+
+
+class CommandExit(SystemExit):
+    def __init__(self, docstring):
+        super().__init__(docstring)
+        self.docstring = docstring
