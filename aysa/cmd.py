@@ -5,10 +5,10 @@
 
 import sys
 import json
+from pathlib import Path
+from functools import lru_cache
 from docopt import docopt, DocoptExit
 from inspect import getdoc, isclass
-from functools import lru_cache
-from pathlib import Path
 from configparser import ConfigParser, ExtendedInterpolation
 
 CONST_COMMAND = 'COMMAND'

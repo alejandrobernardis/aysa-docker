@@ -3,12 +3,15 @@
 # Created: 2019/10/15
 # ~
 
+# Links:
+# ~~~~~~
+# Docker Registry Documentatio: https://docs.docker.com/registry/
+
 import re
 import json
 import requests
 from requests.auth import HTTPBasicAuth
 
-# {registry:port}/{namespace}/{repository}:{tag}
 TAG_SEP = ':'
 REPO_SEP = '/'
 MANIFEST_VERSION = 'v2'
@@ -19,9 +22,9 @@ MEDIA_TYPES = {
     'v2f': 'application/vnd.docker.distribution.manifest.list.v2+json'
 }
 
+rx_schema = re.compile(r'(localhost|.*\.local(?:host)?(?::\d{1,5})?)$', re.I)
 rx_registry = re.compile(r'^(localhost|[\w\-]+(\.[\w\-]+)+)(?::\d{1,5})?\/', re.I)
 rx_repository = re.compile(r'^[a-z0-9]+(?:[/:._-][a-z0-9]+)*$')
-rx_schema = re.compile(r'(localhost|.*\.local(?:host)?(?::\d{1,5})?)$', re.I)
 
 
 def get_media_type(value=MANIFEST_VERSION, obj=True):
@@ -65,6 +68,7 @@ def get_registry(value):
 
 
 def get_parts(value):
+    # value => {registry:port}/{namespace}/{repository}:{tag}
     if not rx_repository.match(get_repository(value)):
         raise RegistryError('El endpoint "{}" está mal formateado.'
                             .format(value))
@@ -82,10 +86,7 @@ def validate_token(value, exclude='|#@'):
 
 
 def scheme(endpoint):
-  if rx_schema.match(endpoint):
-    return 'http'
-  else:
-    return 'https'
+    return 'http' if rx_schema.match(endpoint) else 'https'
 
 
 class Registry:
@@ -110,6 +111,9 @@ class Registry:
 
     def session(self, headers=None, timeout=10):
         s = requests.Session()
+        # TODO(i0608156): Agregar autenticación por token.
+        #  https://docs.docker.com/registry/configuration/#auth
+        #  https://docs.docker.com/registry/configuration/#token
         if self.credentials is not None:
             s.auth = HTTPBasicAuth(*self.get_credentials(True))
         s.headers.update(headers or {})

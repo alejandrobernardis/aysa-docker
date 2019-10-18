@@ -7,8 +7,8 @@
 import sys
 import logging
 from aysa import __version__
-from aysa.docker.api import Registry, Api, Image, get_parts
-from aysa.docker.cmd import NoSuchCommand, Command
+from aysa.cmd import NoSuchCommand, Command
+from aysa.docker.registry import Registry, Api, Image, get_parts
 
 
 # logger
