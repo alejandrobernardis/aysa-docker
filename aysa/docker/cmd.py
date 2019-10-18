@@ -49,8 +49,7 @@ def env_helper(filename=None):
         return parser
     raise SystemExit('Es necesario definir el archivo "~/.aysa/config.ini", '
                      'con las configuración de los diferentes "endpoints": '
-                     '`registry`, `development` y `quality`'.
-)
+                     '`registry`, `development` y `quality`.')
 
 
 class Command:
@@ -95,6 +94,10 @@ class Command:
     def env(self):
         return self.top_level._env
 
+    @env.setter
+    def env(self, value):
+        self.top_level._env = value
+
     def parse(self, argv=None, *args, **kwargs):
         opt, doc = docopt_helper(self, argv, *args, **self.options, **kwargs)
         cmd = opt.pop(CONST_COMMAND)
@@ -104,20 +107,27 @@ class Command:
         if cmd is None:
             raise SystemExit(doc)
 
-        self._env = env_helper(self.env_file).to_dict()
         scmd = self.find_command(cmd)
+        sdoc = getdoc(scmd)
+
+        if not arg:
+            raise SystemExit(sdoc)
         
         if isclass(scmd):
-            scmd(cmd, parent=self).execute(arg[0], arg[1:], self.options)
-
+            sargs = arg[1:] if len(arg) > 1 else None
+            scmd(cmd, parent=self).execute(arg[0], sargs, self.options)
+        
         else: 
-            self.execute(scmd, arg, self.options)
+            self.execute(scmd, arg, self.options, parent=self)
 
     def execute(self, command, args=None, global_args=None, **kwargs):
         if isinstance(command, str) or not callable(command):
             command = self.find_command(command)
+
         hdr_opt, hdr_doc = docopt_helper(command, args, options_first=True)
         hdr_opt = {k.lower(): v for k, v in hdr_opt.items()}
+        self.env = env_helper(self.env_file).to_dict()
+
         command(**hdr_opt, global_args=global_args)
 
     def find_command(self, command):
@@ -138,5 +148,5 @@ class Command:
 
 class NoSuchCommand(Exception):
     def __init__(self, command):
-        super(NoSuchCommand, self).__init__("No such command: %s" % command)
+        super().__init__("No such command: %s" % command)
         self.command = command

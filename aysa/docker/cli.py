@@ -83,7 +83,7 @@ class TagCommand(RegistryCommand):
                                             ex: "dev,rc,latest" [default: *]
         """
         import json, pprint
-        for image in self._list(kwargs['IMAGE'], kwargs['--filter-tags']):
+        for image in self._list(kwargs['image'], kwargs['--filter-tags']):
             print(image)
             if self.verbose:
                 manifest = self.api.fat_manifest(image.repository, image.tag)
@@ -172,20 +172,22 @@ class TopLevelCommand(Command):
     def __init__(self, options=None, **kwargs):
         super().__init__('aysa', options, **kwargs)
 
-    commands = {
-        'tag': TagCommand,
-        'make': MakeCommand
-    }
+    commands = {'tag': TagCommand,'make': MakeCommand}
 
 
 def main():
     try:
-        cmd = TopLevelCommand({'version': __version__})
-        cmd()
+        TopLevelCommand({'version': __version__})()
+    
     except KeyboardInterrupt:
         log.error("Aborting.")
+    
     except NoSuchCommand:
         log.error("No such command.")
+    
+    except Exception as e:
+        log.error(e)
+
     sys.exit(1)
 
 # python -m aysa tag ls -v web:dev
