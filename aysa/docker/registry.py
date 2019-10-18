@@ -7,6 +7,10 @@
 # ~~~~~~
 # Docker Registry Documentatio: https://docs.docker.com/registry/
 
+# TODO(i0608156): Agregar autenticación por token.
+#  https://docs.docker.com/registry/configuration/#auth
+#  https://docs.docker.com/registry/configuration/#token
+
 import re
 import json
 import requests
@@ -111,9 +115,6 @@ class Registry:
 
     def session(self, headers=None, timeout=10):
         s = requests.Session()
-        # TODO(i0608156): Agregar autenticación por token.
-        #  https://docs.docker.com/registry/configuration/#auth
-        #  https://docs.docker.com/registry/configuration/#token
         if self.credentials is not None:
             s.auth = HTTPBasicAuth(*self.get_credentials(True))
         s.headers.update(headers or {})
