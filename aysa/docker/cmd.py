@@ -207,6 +207,11 @@ class Printer:
         self.title(*message, **kwargs)
         self.rule()
 
+    def foot(self, *message, **kwargs):
+        self.blank()
+        self.rule()
+        self.done()
+
     def rule(self, icon='-', maxsize=2):
         self.flush(icon * min(80, max(0, maxsize)))
 
