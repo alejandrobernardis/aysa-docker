@@ -4,6 +4,7 @@
 # ~
 
 import re
+import json
 import requests
 from requests.auth import HTTPBasicAuth
 
@@ -112,6 +113,7 @@ class Registry:
         if self.credentials is not None:
             s.auth = HTTPBasicAuth(*self.get_credentials(True))
         s.headers.update(headers or {})
+        s.headers['User-Agent'] = 'AySA-Command-Line-Tool'
         s.verify = self.verify
         s.timeout = timeout
         return s
@@ -171,7 +173,7 @@ class IterEntity(Entity):
         response_data = self.request('GET', *args, **kwargs).json()
         if self.response_key not in response_data:
             raise RegistryError('La clave "{}" no se encuentra dentro de la '
-                                'rspuesta.'.format(self.response_key))
+                                'respuesta.'.format(self.response_key))
         self.response_data = response_data[self.response_key]
 
     # TODO(i0608156): Evaluar la implementación de un paginador.
@@ -201,7 +203,7 @@ class Tags(IterEntity):
         self.set_url(name=name)
 
 
-class Manifest(Entity):
+class SlimManifest(Entity):
     url_template = '/{name}/manifests/{reference}'
     methods_supported = 'GET,PUT,DELETE'
 
@@ -210,7 +212,7 @@ class Manifest(Entity):
         self.set_url(name=name, reference=reference)
 
 
-class FatManifest(Manifest):
+class FatManifest(SlimManifest):
     methods_supported = 'GET'
 
     def request(self, method, *args, **kwargs):
@@ -240,17 +242,19 @@ class Api:
         return Tags(self.registry, name)
 
     def digest(self, name, reference):
-        response = self.get_manifest(name, reference)
+        response = self._manifest(name, reference).request('GET')
         return response.headers.get('Docker-Content-Digest', None)
 
     def _manifest(self, name, reference):
-        return Manifest(self.registry, name, reference)
+        return SlimManifest(self.registry, name, reference)
 
-    def manifest(self, name, reference):
-        return self._manifest(name, reference).json('GET')
+    def slim_manifest(self, name, reference, obj=False):
+        response = self.get_manifest(name, reference)
+        return Manifest(response) if obj is True else response
 
-    def fat_manifest(self, name, reference):
-        return FatManifest(self.registry, name, reference).json('GET')
+    def fat_manifest(self, name, reference, obj=False):
+        response = FatManifest(self.registry, name, reference).json('GET')
+        return Manifest(response) if obj is True else response
 
     def get_manifest(self, name, reference):
         return self._manifest(name, reference).json('GET')
@@ -293,6 +297,42 @@ class Image:
 
     def __gt__(self, other):
         return self.image > other.image
+
+
+class Manifest:
+    def __init__(self, raw):
+        self._raw = raw
+        self._history = None
+
+    @property
+    def name(self):
+        return self._raw.get('name', None)
+
+    @property
+    def tag(self):
+        return self._raw.get('tag', None)
+
+    @property
+    def layers(self):
+        return self._raw.get('fsLayers', None)
+
+    @property
+    def history(self):
+        try:
+            if self._history is None:
+                raw = self._raw['history'][0]['v1Compatibility']
+                self._history = json.loads(raw)
+            return self._history
+        except:
+            return {}
+
+    @property
+    def created(self):
+        return self.history.get('created', None)
+
+    @property
+    def schema(self):
+        return self._raw.get('schemaVersion', None)
 
 
 class RegistryError(Exception):

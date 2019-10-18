@@ -61,11 +61,11 @@ class RegistryCommand(Command):
                 yield Image(x)
 
 
-class TagCommand(RegistryCommand):
+class ImageCommand(RegistryCommand):
     """
     Administra los `tags` para el despliegue de los servicios.
 
-    Usage: tag COMMAND [ARGS...]
+    Usage: image COMMAND [ARGS...]
 
     Comandos disponibles:
         ls        Lista los `tags` diponibles en el `repositorio`.
@@ -79,17 +79,28 @@ class TagCommand(RegistryCommand):
         Usage: ls [options] [IMAGE...]
 
         Opciones:
+            -v, --verbose                   Activa el modo `verbose`.
+            -m, --manifest                  Activa el modo `manifest`, éste imprime
+                                            en pantalla el contenido del manifiesto,
+                                            anulando al modo `verbose`.
             -t tags, --filter-tags=tags     Lista de `tags` separados por comas,
                                             ex: "dev,rc,latest" [default: *]
         """
-        import json, pprint
-        for image in self._list(kwargs['image'], kwargs['--filter-tags']):
-            print(image)
-            if self.verbose:
-                manifest = self.api.fat_manifest(image.repository, image.tag)
-                pprint.pprint(json.loads(manifest['history'][0]['v1Compatibility']))
-
-
+        verbose = kwargs.get('--verbose', False)
+        manifest = kwargs.get('--manifest', False)
+        self.output.head('Lista de `tags`:')
+        for x in self._list(kwargs['image'], kwargs['--filter-tags']):
+            self.output.bullet(x.repository, x.tag, tmpl='{}:{}')
+            if verbose or manifest:
+                tmpl = ' - {} = {}'
+                m = self.api.fat_manifest(x.repository, x.tag, True)
+                if verbose and not manifest:
+                    self.output.write('created', m.created, tmpl=tmpl)
+                    d = self.api.digest(x.repository, x.tag)
+                    self.output.write('digest', d, tmpl=tmpl)
+                elif manifest:
+                    self.output.json(m.history)
+            self.output.flush()
 
     def add(self, **kwargs):
         """
@@ -162,10 +173,9 @@ class TopLevelCommand(Command):
                                                 de no ser definido: `~/.aysa/config.ini`.
         -X config, --proxy=config               Configuración del `proxy` en una sola línea:
                                                 `<protocol>://<username>:<password>@<host>:<port>`
-        -V, --verbose                           Activa el modo `verbose`.
 
     Comandos disponibles:
-        tag     Administra los `tags` del `repositorio`.
+        image   Lista las `imágenes` y administra los `tags` del `repositorio`.
         make    Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
 
     > Utilice `aysa COMMAND (-h|--help)` para ver la `ayuda` especifica del comando.
@@ -173,7 +183,7 @@ class TopLevelCommand(Command):
     def __init__(self, options=None, **kwargs):
         super().__init__('aysa', options, **kwargs)
 
-    commands = {'tag': TagCommand,'make': MakeCommand}
+    commands = {'image': ImageCommand,'make': MakeCommand}
 
 
 def main():

@@ -35,4 +35,12 @@ def make(self, options):
         prod    Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
     """
     MakeCommand('make', options, parent=self).execute(**options)
+
+
+if verbose:
+    manifest = self.api.fat_manifest(image.repository, image.tag)
+    pprint.pprint(json.loads(manifest['history'][0]['v1Compatibility']))
 ```
+
+
+

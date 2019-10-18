@@ -4,6 +4,7 @@
 # ~
 
 import sys
+import json
 from docopt import docopt, DocoptExit
 from inspect import getdoc, isclass
 from functools import lru_cache
@@ -20,7 +21,7 @@ def docopt_helper(docstring, *args, **kwargs):
             docstring = getdoc(docstring)
         return docopt(docstring, *args, **kwargs), docstring
     except DocoptExit:
-        raise SystemExit(docstring)
+        raise CommandExit(docstring)
 
 
 class AttrDict(dict):
@@ -47,13 +48,14 @@ def env_helper(filename=None):
     parser = ConfigObject(interpolation=ExtendedInterpolation())
     if parser.read(filepath, encoding='utf-8'):
         return parser
-    raise SystemExit('Es necesario definir el archivo "~/.aysa/config.ini", '
-                     'con las configuración de los diferentes "endpoints": '
-                     '`registry`, `development` y `quality`.')
+    raise CommandExit('Es necesario definir el archivo "~/.aysa/config.ini", '
+                      'con las configuración de los diferentes "endpoints": '
+                      '`registry`, `development` y `quality`.')
 
 
 class Command:
     def __init__(self, command, options=None, **kwargs):
+        self.output = Printer()
         self.command = command
         self.options = options or {}
         self.options.setdefault('options_first', True)
@@ -108,7 +110,7 @@ class Command:
             scmd = self.find_command(cmd)
             sdoc = getdoc(scmd)
         except:
-            raise SystemExit(doc)
+            raise CommandExit(doc)
 
         try:
             if isclass(scmd):
@@ -120,7 +122,7 @@ class Command:
         except Exception as e:
             if isinstance(e, CommandExit):
                 raise e
-        raise SystemExit(sdoc)
+        raise CommandExit(sdoc)
 
     def execute(self, command, args=None, global_args=None, **kwargs):
         if isinstance(command, str):
@@ -134,6 +136,8 @@ class Command:
             command(**hdr_opt, global_args=global_args)
         except Exception as e:
             raise CommandExit(hdr_doc)
+
+        self.done()
 
     def find_command(self, command):
         try:
@@ -150,6 +154,9 @@ class Command:
     def __str__(self):
         return '<Command="{}">'.format(self.command)
 
+    def done(self):
+        self.output.done()
+
 
 class NoSuchCommand(Exception):
     def __init__(self, command):
@@ -161,3 +168,72 @@ class CommandExit(SystemExit):
     def __init__(self, docstring):
         super().__init__(docstring)
         self.docstring = docstring
+
+
+class Printer:
+    def __init__(self, output=None):
+        self.output = output or sys.stdout
+
+    def _parse(self, *values, sep=' ', end='\n', endx=None, **kwargs):
+        tmpl = kwargs.pop('tmpl', None)
+        if tmpl is not None:
+            value = tmpl.format(*values)
+        else:
+            value = sep.join([str(x) for x in values])
+        if kwargs.pop('title', False):
+            value = value.title()
+        if kwargs.pop('lower', False):
+            value = value.lower()
+        if kwargs.pop('upper', False):
+            value = value.upper()
+        end = '\n' if not end and endx else end
+        if end and (not value.endswith(end) or endx is not None):
+            return '{}{}'.format(value, end * (endx or 1))
+        return value
+
+    def done(self):
+        self.flush('Done.', endx=3)
+
+    def error(self, *message, **kwargs):
+        kwargs['icon'] = '!'
+        self.bullet(*message, **kwargs)
+
+    def title(self, *message, **kwargs):
+        kwargs['icon'] = '~'
+        self.bullet(*message, title=True, **kwargs)
+
+    def head(self, *message, **kwargs):
+        self.blank()
+        self.title(*message, **kwargs)
+        self.rule()
+
+    def rule(self, icon='-', maxsize=2):
+        self.flush(icon * min(80, max(0, maxsize)))
+
+    def question(self, *message, **kwargs):
+        kwargs['icon'] = '?'
+        self.bullet(*message, **kwargs)
+
+    def bullet(self, *message, icon='>', **kwargs):
+        if 'tmpl' in kwargs:
+            kwargs['tmpl'] = '{} ' + kwargs['tmpl']
+        self.write(icon, *message, **kwargs)
+
+    def blank(self):
+        self.flush('')
+
+    def write(self, *values, **kwargs):
+        value = self._parse(*values, **kwargs)
+        if value:
+            self.output.write(value)
+
+    def flush(self, *values, **kwargs):
+        if values:
+            self.write(*values, **kwargs)
+        self.output.flush()
+
+    def json(self, value, indent=2):
+        raw = json.dumps(value, indent=indent) \
+              if isinstance(value, dict) else '-'
+        self.output.write(raw + '\n')
+        self.flush()
