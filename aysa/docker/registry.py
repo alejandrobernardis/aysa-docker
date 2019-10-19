@@ -2,15 +2,16 @@
 # Email: alejandro.bernardis at gmail.com
 # Created: 2019/10/15
 # ~
+"""
+ Docker Registry Documentation: https://docs.docker.com/registry/
 
-# Links:
-# ~~~~~~
-# Docker Registry Documentatio: https://docs.docker.com/registry/
+ TODO i0608156: Agregar autenticación por token.
+                https://docs.docker.com/registry/configuration/#auth
 
-# TODO(i0608156): Agregar autenticación por token.
-#  https://docs.docker.com/registry/configuration/#auth
-#  https://docs.docker.com/registry/configuration/#token
+ TODO i0608156: Evaluar la implementación de un paginador para la iteración
+                del catálogo y tags.
 
+"""
 import re
 import json
 import requests
@@ -181,7 +182,6 @@ class IterEntity(Entity):
                                 'respuesta.'.format(self.response_key))
         self.response_data = response_data[self.response_key]
 
-    # TODO(i0608156): Evaluar la implementación de un paginador.
     def __iter__(self):
         if self.response_data is None:
             self.get()

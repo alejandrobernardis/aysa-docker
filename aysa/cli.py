@@ -7,7 +7,8 @@ import sys
 import logging
 from aysa import __version__
 from aysa.commands import NoSuchCommand, Command
-from aysa.commands.registry import ImageCommand, ReleaseCommand
+from aysa.commands.registry import ImageCommand
+from requests import ConnectionError
 
 
 # logger
@@ -46,8 +47,12 @@ class TopLevelCommand(Command):
     def __init__(self, options=None, **kwargs):
         super().__init__('aysa', options, **kwargs)
 
-    commands = {'image': ImageCommand, 'release': ReleaseCommand,
-                'deploy': None, 'config': None}
+    commands = {
+        'image': ImageCommand,
+        'release': None,
+        'deploy': None,
+        'config': None
+    }
 
 
 # dispatch
@@ -57,8 +62,6 @@ def main():
         sys.exit(0)
     except KeyboardInterrupt:
         log.error("Aborting.")
-    except NoSuchCommand:
-        log.error("No such command.")
     except Exception as e:
         log.error(e)
         # import traceback

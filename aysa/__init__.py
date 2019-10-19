@@ -33,6 +33,7 @@ __all__ = [
 # const
 WIN = os.name == 'nt'
 EMPTY = object()
+WILDCARD = '*'
 
 # version
 SEGMENT = 'dev'

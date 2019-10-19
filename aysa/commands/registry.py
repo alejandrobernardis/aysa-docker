@@ -3,12 +3,12 @@
 # Created: 2019/10/18
 # ~
 
+from aysa import WILDCARD
 from aysa.commands import Command
 from aysa.docker.registry import Api, Image
-WILDCARD = '*'
 
 
-class RegistryCommand(Command):
+class _RegistryCommand(Command):
     _registry_api = None
 
     @property
@@ -39,7 +39,6 @@ class RegistryCommand(Command):
     def _list(self, filter_repos=None, filter_tags=None):
         filter_repos = self._fix_images_list(filter_repos)
         filter_tags = self._fix_tags_list(filter_tags)
-
         for x in self.api.catalog():
             if (self.namespace and not x.startswith(self.namespace)) \
                     or (filter_repos and x not in filter_repos):
@@ -53,7 +52,7 @@ class RegistryCommand(Command):
                 yield Image(x)
 
 
-class ImageCommand(RegistryCommand):
+class ImageCommand(_RegistryCommand):
     """
     Administra los `tags` para el despliegue de los servicios.
 
@@ -64,6 +63,7 @@ class ImageCommand(RegistryCommand):
         add       Crea un nuevo `tag` a partir de otro existente.
         delete    Elimina un `tag` existente.
     """
+
     def ls(self, **kwargs):
         """
         Lista los `tags` existentes en el repositorio.
@@ -107,39 +107,6 @@ class ImageCommand(RegistryCommand):
         Elimina un `tag` existente.
 
         Usage: delete [options] IMAGE_TAG [IMAGE_TAG...]
-
-        Opciones:
-            -y, --yes    Responde "SI" a todas las preguntas.
-        """
-        print(kwargs)
-
-
-class ReleaseCommand(RegistryCommand):
-    """
-    Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
-
-    Usage: release COMMAND [ARGS ...]
-
-    Comandos disponibles:
-        test    Crea las `imágenes` para el entorno de `QA/TESTING`.
-        prod    Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
-    """
-    def test(self, **kwargs):
-        """
-        Crea las `imágenes` para el entorno de `QA/TESTING`.
-
-        Usage: test [options]
-
-        Opciones:
-            -y, --yes    Responde "SI" a todas las preguntas.
-        """
-        print(kwargs)
-
-    def prod(self, **kwargs):
-        """
-        Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
-
-        Usage: prod [options]
 
         Opciones:
             -y, --yes    Responde "SI" a todas las preguntas.
