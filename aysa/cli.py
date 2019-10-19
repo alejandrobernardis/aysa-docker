@@ -31,13 +31,15 @@ class TopLevelCommand(Command):
         -E filename, --env=filename             Archivo de configuración del entorno (`.ini`),
                                                 el mismo será buscado en la siguiente ruta
                                                 de no ser definido: `~/.aysa/config.ini`.
-        -X config, --proxy=config               Configuración del `proxy` en una sola línea:
+        -X url, --proxy=url                     Configuración del `proxy` en una sola línea:
                                                 `<protocol>://<username>:<password>@<host>:<port>`
 
     Comandos disponibles:
         image       Lista las `imágenes` y administra los `tags` del `repositorio`.
         release     Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
-        deploy      ...
+        deploy      Despliega las `imágenes` en los entornos de `DESARROLLO` y `QA/TESTING`.
+        config      Lista y administra los valores de la configuración del entorno de trabajo
+                    definido por el archivo `~/.aysa/config.ini`
 
     > Utilice `aysa COMMAND (-h|--help)` para ver la `ayuda` especifica del comando.
     """
@@ -45,7 +47,7 @@ class TopLevelCommand(Command):
         super().__init__('aysa', options, **kwargs)
 
     commands = {'image': ImageCommand, 'release': ReleaseCommand,
-                'deploy': None}
+                'deploy': None, 'config': None}
 
 
 # dispatch
@@ -59,7 +61,6 @@ def main():
         log.error("No such command.")
     except Exception as e:
         log.error(e)
-
-        import traceback
-        traceback.print_exc()
+        # import traceback
+        # traceback.print_exc()
     sys.exit(1)

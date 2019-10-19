@@ -41,7 +41,7 @@ setup(
 
     entry_points={
         'console_scripts': [
-            'aysa=aysa.docker.cli:main',
+            'aysa=aysa.cli:main',
         ],
     },
 

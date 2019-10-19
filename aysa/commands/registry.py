@@ -3,9 +3,8 @@
 # Created: 2019/10/18
 # ~
 
-from aysa.commands import Command, NoSuchCommand
-from aysa.docker.registry import Api
-
+from aysa.commands import Command
+from aysa.docker.registry import Api, Image
 WILDCARD = '*'
 
 
