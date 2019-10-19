@@ -6,7 +6,6 @@
 import sys
 import json
 from pathlib import Path
-from functools import lru_cache
 from docopt import docopt, DocoptExit
 from inspect import getdoc, isclass
 from configparser import ConfigParser, ExtendedInterpolation
@@ -109,7 +108,7 @@ class Command:
         try:
             scmd = self.find_command(cmd)
             sdoc = getdoc(scmd)
-        except:
+        except NoSuchCommand:
             raise CommandExit(doc)
 
         try:
@@ -118,26 +117,19 @@ class Command:
                 scmd(cmd, parent=self).execute(arg[0], sargs, self.options)
             else:
                 self.execute(scmd, arg, self.options, parent=self)
-            return
-        except Exception as e:
-            if isinstance(e, CommandExit):
-                raise e
-        raise CommandExit(sdoc)
+        except (NoSuchCommand, IndexError):
+            raise CommandExit(sdoc)
 
-    def execute(self, command, args=None, global_args=None, **kwargs):
+    def execute(self, command, argv=None, global_args=None, **kwargs):
         if isinstance(command, str):
             command = self.find_command(command)
 
-        hdr_opt, hdr_doc = docopt_helper(command, args, options_first=True)
-        hdr_opt = {k.lower(): v for k, v in hdr_opt.items()}
-        self.env = env_helper(self.env_file).to_dict()
+        opt, doc = docopt_helper(command, argv, options_first=True)
+        opt = {k.lower(): v for k, v in opt.items()}
+        self.env_load()
 
-        try:
-            command(**hdr_opt, global_args=global_args)
-        except Exception as e:
-            raise CommandExit(hdr_doc)
-
-        self.done()
+        command(**opt, global_args=global_args)
+        self.output.foot()
 
     def find_command(self, command):
         try:
@@ -147,6 +139,9 @@ class Command:
         except:
             pass
         raise NoSuchCommand(command)
+
+    def env_load(self):
+        self.env = env_helper(self.env_file).to_dict()
 
     def __call__(self, argv=None, *args, **kwargs):
         return self.parse(argv, *args, **kwargs)
@@ -207,7 +202,7 @@ class Printer:
         self.title(*message, **kwargs)
         self.rule()
 
-    def foot(self, *message, **kwargs):
+    def foot(self):
         self.blank()
         self.rule()
         self.done()

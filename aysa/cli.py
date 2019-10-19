@@ -8,7 +8,6 @@ import logging
 from aysa import __version__
 from aysa.commands import NoSuchCommand, Command
 from aysa.commands.registry import ImageCommand, ReleaseCommand
-from aysa.docker.registry import Registry, Api, Image, get_parts
 
 
 # logger
@@ -60,4 +59,7 @@ def main():
         log.error("No such command.")
     except Exception as e:
         log.error(e)
+
+        import traceback
+        traceback.print_exc()
     sys.exit(1)
