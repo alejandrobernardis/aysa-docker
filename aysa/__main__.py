@@ -3,5 +3,5 @@
 # Created: 2019/10/12
 # ~
 
-from aysa.docker.cli import main
+from aysa.cli import main
 main()

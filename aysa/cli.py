@@ -2,157 +2,18 @@
 # Email: alejandro.bernardis at gmail.com
 # Created: 2019/10/12
 # ~
-# -V, --verbose     Activa el modo `verbose`.
 
 import sys
 import logging
 from aysa import __version__
-from aysa.cmd import NoSuchCommand, Command
+from aysa.commands import NoSuchCommand, Command
+from aysa.commands.registry import ImageCommand, ReleaseCommand
 from aysa.docker.registry import Registry, Api, Image, get_parts
 
 
 # logger
 log = logging.getLogger(__name__)
 console_handler = logging.StreamHandler(sys.stderr)
-
-
-class RegistryCommand(Command):
-    _registry_api = None
-
-    @property
-    def api(self):
-        if self._registry_api is None:
-            self._registry_api = Api(**self.env.registry)
-        return self._registry_api
-
-    @property
-    def namespace(self):
-        return self.env.registry.namespace
-
-    def _fix_image_name(self, value, namespace=None):
-        value = value.strip()
-        namespace = namespace or self.namespace
-        return '{}/{}'.format(namespace, value) \
-            if not value.startswith(namespace) else value
-
-    def _fix_images_list(self, values, namespace=None):
-        values = values.split(',') if isinstance(values, str) else values or []
-        return [self._fix_image_name(x.strip(), namespace) for x in values]
-
-    def _fix_tags_list(self, values):
-        if not values or values == '*':
-            return '*'
-        return [x.strip() for x in values.split(',')]
-
-    def _list(self, filter_repos=None, filter_tags=None):
-        filter_repos = self._fix_images_list(filter_repos)
-        filter_tags = self._fix_tags_list(filter_tags)
-
-        for x in self.api.catalog():
-            if (self.namespace and not x.startswith(self.namespace)) \
-                    or (filter_repos and x not in filter_repos):
-                continue
-            if filter_tags:
-                for y in self.api.tags(x):
-                    if filter_tags != '*' and y not in filter_tags:
-                        continue
-                    yield Image('{}:{}'.format(x, y))
-            else:
-                yield Image(x)
-
-
-class ImageCommand(RegistryCommand):
-    """
-    Administra los `tags` para el despliegue de los servicios.
-
-    Usage: image COMMAND [ARGS...]
-
-    Comandos disponibles:
-        ls        Lista los `tags` diponibles en el `repositorio`.
-        add       Crea un nuevo `tag` a partir de otro existente.
-        delete    Elimina un `tag` existente.
-    """
-    def ls(self, **kwargs):
-        """
-        Lista los `tags` existentes en el repositorio.
-
-        Usage: ls [options] [IMAGE...]
-
-        Opciones:
-            -v, --verbose                   Activa el modo `verbose`.
-            -m, --manifest                  Activa el modo `manifest`, éste imprime
-                                            en pantalla el contenido del manifiesto,
-                                            anulando al modo `verbose`.
-            -t tags, --filter-tags=tags     Lista de `tags` separados por comas,
-                                            ex: "dev,rc,latest" [default: *]
-        """
-        verbose = kwargs.get('--verbose', False)
-        manifest = kwargs.get('--manifest', False)
-        self.output.head('Lista de `tags`:')
-        for x in self._list(kwargs['image'], kwargs['--filter-tags']):
-            self.output.bullet(x.repository, x.tag, tmpl='{}:{}')
-            if verbose or manifest:
-                tmpl = ' - {} = {}'
-                m = self.api.fat_manifest(x.repository, x.tag, True)
-                if verbose and not manifest:
-                    self.output.write('created', m.created, tmpl=tmpl)
-                    d = self.api.digest(x.repository, x.tag)
-                    self.output.write('digest', d, tmpl=tmpl)
-                elif manifest:
-                    self.output.json(m.history)
-            self.output.flush()
-
-    def add(self, **kwargs):
-        """
-        Crea un nuevo `tag` a partir de otro existente.
-
-        Usage: add SOURCE_IMAGE_TAG TARGET_TAG
-        """
-        print(kwargs)
-
-    def delete(self, **kwargs):
-        """
-        Elimina un `tag` existente.
-
-        Usage: delete [options] IMAGE_TAG [IMAGE_TAG...]
-
-        Opciones:
-            -y, --yes    Responde "SI" a todas las preguntas.
-        """
-        print(kwargs)
-
-
-class MakeCommand(RegistryCommand):
-    """
-    Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
-
-    Usage: make COMMAND [ARGS ...]
-
-    Comandos disponibles:
-        test    Crea las `imágenes` para el entorno de `QA/TESTING`.
-        prod    Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
-    """
-    def test(self, **kwargs):
-        """
-        Crea las `imágenes` para el entorno de `QA/TESTING`.
-
-        Usage: test [options]
-
-        Opciones:
-            -y, --yes    Responde "SI" a todas las preguntas.
-        """
-        print(kwargs)
-
-    def prod(self, **kwargs):
-        """
-        Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
-
-        Usage: prod [options]
-
-        Opciones:
-            -y, --yes    Responde "SI" a todas las preguntas.
-        """
-        print(kwargs)
 
 
 # top level command
@@ -175,36 +36,28 @@ class TopLevelCommand(Command):
                                                 `<protocol>://<username>:<password>@<host>:<port>`
 
     Comandos disponibles:
-        image   Lista las `imágenes` y administra los `tags` del `repositorio`.
-        make    Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
+        image       Lista las `imágenes` y administra los `tags` del `repositorio`.
+        release     Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
+        deploy      ...
 
     > Utilice `aysa COMMAND (-h|--help)` para ver la `ayuda` especifica del comando.
     """
     def __init__(self, options=None, **kwargs):
         super().__init__('aysa', options, **kwargs)
 
-    commands = {'image': ImageCommand,'make': MakeCommand}
+    commands = {'image': ImageCommand, 'release': ReleaseCommand,
+                'deploy': None}
 
 
+# dispatch
 def main():
     try:
         TopLevelCommand({'version': __version__})()
         sys.exit(0)
-
     except KeyboardInterrupt:
         log.error("Aborting.")
-
     except NoSuchCommand:
         log.error("No such command.")
-
     except Exception as e:
-        pass
-
+        log.error(e)
     sys.exit(1)
-
-# python -m aysa tag ls -v web:dev
-# python -m aysa tag add web:dev rc
-# python -m aysa tag delete web:dev
-# python -m aysa make test
-# python -m aysa make prod
-# python -m aysa make prod -y
