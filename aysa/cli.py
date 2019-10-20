@@ -6,9 +6,8 @@
 import sys
 import logging
 from aysa import __version__
-from aysa.commands import NoSuchCommand, Command
+from aysa.commands import Command
 from aysa.commands.registry import ImageCommand
-from requests import ConnectionError
 
 
 # logger

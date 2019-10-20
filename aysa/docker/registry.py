@@ -176,7 +176,7 @@ class IterEntity(Entity):
         self.prefix_filter = prefix_filter
 
     def get(self, *args, **kwargs):
-        response_data = self.request('GET', *args, **kwargs).json()
+        response_data = self.json('GET', *args, **kwargs)
         if self.response_key not in response_data:
             raise RegistryError('La clave "{}" no se encuentra dentro de la '
                                 'respuesta.'.format(self.response_key))
@@ -264,11 +264,11 @@ class Api:
     def get_manifest(self, name, reference):
         return self._manifest(name, reference).json('GET')
 
-    def put_manifest(self, name, reference):
-        return self._manifest(name, reference).json('PUT')
+    def put_manifest(self, name, reference, **kwargs):
+        return self._manifest(name, reference).json('PUT', **kwargs)
 
-    def del_manifest(self, name, reference):
-        return self._manifest(name, reference).json('DELETE')
+    def del_manifest(self, name, reference, **kwargs):
+        return self._manifest(name, reference).json('DELETE', **kwargs)
 
 
 class Image:

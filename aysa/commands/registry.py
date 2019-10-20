@@ -36,7 +36,7 @@ class _RegistryCommand(Command):
             return WILDCARD
         return [x.strip() for x in values.split(',')]
 
-    def _list(self, filter_repos=None, filter_tags=None):
+    def _list(self, filter_repos=None, filter_tags=None, **kwargs):
         filter_repos = self._fix_images_list(filter_repos)
         filter_tags = self._fix_tags_list(filter_tags)
         for x in self.api.catalog():
@@ -60,7 +60,7 @@ class ImageCommand(_RegistryCommand):
 
     Comandos disponibles:
         ls        Lista los `tags` diponibles en el `repositorio`.
-        add       Crea un nuevo `tag` a partir de otro existente.
+        put       Crea un nuevo `tag` a partir de otro existente.
         delete    Elimina un `tag` existente.
     """
 
@@ -94,13 +94,16 @@ class ImageCommand(_RegistryCommand):
                     self.output.json(m.history)
             self.output.flush()
 
-    def add(self, **kwargs):
+    def put(self, **kwargs):
         """
         Crea un nuevo `tag` a partir de otro existente.
 
-        Usage: add SOURCE_IMAGE_TAG TARGET_TAG
+        Usage: put SOURCE_IMAGE_TAG TARGET_TAG
         """
-        print(kwargs)
+        src = Image(self._fix_image_name(kwargs['source_image_tag']))
+        dst = kwargs['target_tag']
+        manifest = self.api.slim_manifest(src.repository, src.tag)
+        self.api.put_manifest(src.repository, dst, json=manifest)
 
     def delete(self, **kwargs):
         """
