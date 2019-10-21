@@ -6,7 +6,6 @@
 from aysa import WILDCARD
 from aysa.commands import Command
 from aysa.docker.registry import Api, Image
-from functools import partialmethod
 
 
 class _RegistryCommand(Command):
