@@ -81,34 +81,32 @@ class DeployCommand(_ConnectionCommand):
         test    Despliegue en el entorno de `QA/TESTING`.
     """
     def _deploy(self, **kwargs):
-        services = []
+        # establecemos la conexión
         cnx = self._connection()
-        service = kwargs['service']
+
+        # servicios a purgar
+        services = []
 
         # 1. detener los servicios
-        #  >> docker-compose stop
         self.run('docker-compose stop')
 
         # 2. buscar los servicios y sus imágenes
-        #  >> docker-compose images | awk '{print $1 ";" $2 ":" $3}'
         lines = self.run("docker-compose images "
                          "| awk '{print $1 \";\" $2 \":\" $3}'")
+
         # for line in lines.stdout.splitlines():
         #     container, _, image = line.partition(';')
         #     services.append((container, image))
 
         # 3. eliminar los servicios
-        #  >> docker-compose rm [service...]
         self.run('docker-compose rm {}'
                  .format(' '.join((x[0] for x in services))))
 
         # 4. eliminar las imágenes
-        #  >> docker rmi -f $()
         self.run('docker-compose rmi -f {}'
                  .format(' '.join((x[1] for x in services))))
 
         # 5. deplegar
-        #  >> docker-compose up -d
         self.run('docker-compose up -d')
 
     def deve(self, **kwargs):
