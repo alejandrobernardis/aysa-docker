@@ -34,7 +34,8 @@ class _RegistryCommand(Command):
     def _fix_tags_list(self, values):
         if not values or values == WILDCARD:
             return WILDCARD
-        return [x.strip() for x in values.split(',')]
+        values = values.split(',') if not isinstance(values, list) else values
+        return [x.strip() for x in values]
 
     def _list(self, filter_repos=None, filter_tags=None, **kwargs):
         filter_repos = self._fix_images_list(filter_repos)
@@ -60,8 +61,8 @@ class ImageCommand(_RegistryCommand):
 
     Comandos disponibles:
         ls        Lista los `tags` diponibles en el `repositorio`.
-        put       Crea un nuevo `tag` a partir de otro existente.
-        delete    Elimina un `tag` existente.
+        tag       Crea un nuevo `tag` a partir de otro existente.
+        rm        Elimina uno o mas `tags` existentes.
     """
 
     def ls(self, **kwargs):
@@ -85,7 +86,7 @@ class ImageCommand(_RegistryCommand):
             self.output.bullet(x.repository, x.tag, tmpl='{}:{}')
             if verbose or manifest:
                 tmpl = ' - {} = {}'
-                m = self.api.fat_manifest(x.repository, x.tag, True)
+                m = self.api.manifest(x.repository, x.tag, True, True)
                 if verbose and not manifest:
                     self.output.write('created', m.created, tmpl=tmpl)
                     d = self.api.digest(x.repository, x.tag)
@@ -94,21 +95,20 @@ class ImageCommand(_RegistryCommand):
                     self.output.json(m.history)
             self.output.flush()
 
-    def put(self, **kwargs):
+    def tag(self, **kwargs):
         """
         Crea un nuevo `tag` a partir de otro existente.
 
-        Usage: put SOURCE_IMAGE_TAG TARGET_TAG
+        Usage: tag SOURCE_IMAGE_TAG TARGET_TAG
         """
         src = Image(self._fix_image_name(kwargs['source_image_tag']))
-        json = self.api.slim_manifest(src.repository, src.tag)
-        self.api.put_manifest(src.repository, kwargs['target_tag'], json=json)
+        self.api.put_tag(src.repository, src.tag, kwargs['target_tag'])
 
-    def delete(self, **kwargs):
+    def rm(self, **kwargs):
         """
         Elimina un `tag` existente.
 
-        Usage: delete [options] IMAGE_TAG [IMAGE_TAG...]
+        Usage: rm [options] IMAGE_TAG [IMAGE_TAG...]
 
         Opciones:
             -y, --yes    Responde "SI" a todas las preguntas.
@@ -116,22 +116,35 @@ class ImageCommand(_RegistryCommand):
         if kwargs['--yes'] is True or self.yes():
             for x in kwargs['image_tag']:
                 src = Image(self._fix_image_name(x))
-                self.api.del_manifest(src.repository, src.tag)
+                try:
+                    self.api.delete_tag(src.repository, src.tag)
+                except Exception as e:
+                    pass
 
 
 class ReleaseCommand(_RegistryCommand):
     """
     Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
 
-    Usage: release COMMAND [ARGS...]
+    Usage: release [options] COMMAND [ARGS...]
+
+    Opciones:
+        -y, --yes    Responde "SI" a todas las preguntas.
 
     Comandos disponibles:
         test    Crea las `imágenes` para el entorno de `QA/TESTING`.
         prod    Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
     """
-    def _release(self, tag, **kwargs):
-        for x in self._list(kwargs['image']):
-            self.output.write(x)
+    def _release(self, source_tag, target_tag, **kwargs):
+        if kwargs['--yes'] is True or self.yes():
+            for x in self._list(kwargs['image'], source_tag):
+                t = Image('{}:{}'.format(x.repository, target_tag))
+                try:
+                    roolback = '{}-rollback'.format(t.tag)
+                    self.api.put_tag(t.repository, t.tag, rollback)
+                except Exception as e:
+                    pass
+                self.api.put_tag(x.repository, x.tag, t.tag)
 
     def test(self, **kwargs):
         """
@@ -139,7 +152,7 @@ class ReleaseCommand(_RegistryCommand):
 
         Usage: test [IMAGE...]
         """
-        self._release('rc', **kwargs)
+        self._release('dev', 'rc', **kwargs)
 
     def prod(self, **kwargs):
         """
@@ -147,4 +160,4 @@ class ReleaseCommand(_RegistryCommand):
 
         Usage: prod [IMAGE...]
         """
-        self._release('latest', **kwargs)
+        self._release('rc', 'latest', **kwargs)

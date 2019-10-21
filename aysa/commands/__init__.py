@@ -63,6 +63,7 @@ class Command:
         self.options = options or {}
         self.options.setdefault('options_first', True)
         self.parent = kwargs.pop('parent', None)
+        self._logger = kwargs.pop('logger', None)
         self._env = None
 
     @property
@@ -84,6 +85,20 @@ class Command:
         return self.top_level.options
 
     @property
+    def logger(self):
+        if self._logger is not None:
+            return self._logger
+        return self.top_level._logger
+
+    @property
+    def env(self):
+        return self.top_level._env
+
+    @env.setter
+    def env(self, value):
+        self.top_level._env = value
+
+    @property
     def debug(self):
         return self.global_options.get('--debug', False)
 
@@ -94,14 +109,6 @@ class Command:
     @property
     def env_file(self):
         return self.global_options.get('--env', None)
-
-    @property
-    def env(self):
-        return self.top_level._env
-
-    @env.setter
-    def env(self, value):
-        self.top_level._env = value
 
     def parse(self, argv=None, *args, **kwargs):
         opt, doc = docopt_helper(self, argv, *args, **self.options, **kwargs)

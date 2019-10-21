@@ -32,9 +32,9 @@ rx_registry = re.compile(r'^(localhost|[\w\-]+(\.[\w\-]+)+)(?::\d{1,5})?\/', re.
 rx_repository = re.compile(r'^[a-z0-9]+(?:[/:._-][a-z0-9]+)*$')
 
 
-def get_media_type(value=MANIFEST_VERSION, obj=True):
+def get_media_type(value=MANIFEST_VERSION, key='Accept', obj=True):
     value = MEDIA_TYPES[value if value in MEDIA_TYPES else MANIFEST_VERSION]
-    return {'Accept': value} if obj is True else value
+    return {key: value} if obj is True else value
 
 
 def remove_registry(value):
@@ -126,7 +126,6 @@ class Registry:
 
     def request(self, method, *args, **kwargs):
         headers = kwargs.pop('headers', {})
-        headers.setdefault('Accept', get_media_type(obj=False))
         with self.session(headers) as req:
             response = req.request(method, *args, **kwargs)
             try:
@@ -164,7 +163,7 @@ class Entity:
         return response
 
     def json(self, method, *args, **kwargs):
-        return self.request(method,*args, **kwargs).json()
+        return self.request(method, *args, **kwargs).json()
 
 
 class IterEntity(Entity):
@@ -210,21 +209,26 @@ class Tags(IterEntity):
 
 class SlimManifest(Entity):
     url_template = '/{name}/manifests/{reference}'
+    media_type = 'v2'
     methods_supported = 'GET,PUT,DELETE'
 
     def __init__(self, client, name, reference):
         super().__init__(client)
         self.set_url(name=name, reference=reference)
 
-
-class FatManifest(SlimManifest):
-    methods_supported = 'GET'
-
     def request(self, method, *args, **kwargs):
         headers = kwargs.pop('headers', {})
-        headers.update(get_media_type('v2f'))
+        media_type = get_media_type(self.media_type, obj=False)
+        update = {'Accept': '*/*', 'Content-Type': media_type} \
+            if method in ('PUT', 'DELETE') else {'Accept': media_type}
+        headers.update(update)
         kwargs['headers'] = headers
         return super().request(method, *args, **kwargs)
+
+
+class FatManifest(SlimManifest):
+    media_type = 'v2f'
+    methods_supported = 'GET'
 
 
 class Api:
@@ -246,29 +250,37 @@ class Api:
     def tags(self, name):
         return Tags(self.registry, name)
 
-    def digest(self, name, reference):
-        response = self._manifest(name, reference).request('GET')
-        return response.headers.get('Docker-Content-Digest', None)
+    def put_tag(self, name, reference, target):
+        return self.put_manifest(name, target, self.manifest(name, reference))
 
-    def _manifest(self, name, reference):
-        return SlimManifest(self.registry, name, reference)
+    def delete_tag(self, name, reference):
+        return self.del_manifest(name, self.digest(name, reference))
 
-    def slim_manifest(self, name, reference, obj=False):
-        response = self.get_manifest(name, reference)
-        return Manifest(response) if obj is True else response
+    def manifest(self, name, reference, fat=False, obj=False, **kwargs):
+        r = self.get_manifest(name, reference, fat).json()
+        return Manifest(r) if obj is True else r
 
-    def fat_manifest(self, name, reference, obj=False):
-        response = FatManifest(self.registry, name, reference).json('GET')
-        return Manifest(response) if obj is True else response
+    def digest(self, name, reference, **kwargs):
+        r = self.get_manifest(name, reference)
+        return r.headers.get('Docker-Content-Digest', None)
 
-    def get_manifest(self, name, reference):
-        return self._manifest(name, reference).json('GET')
+    # helpers
 
-    def put_manifest(self, name, reference, json):
-        return self._manifest(name, reference).json('PUT', json=json)
+    def _manifest(self, name, reference, fat=False):
+        args = (self.registry, name, reference)
+        return SlimManifest(*args) if fat is False else FatManifest(*args)
+
+    def get_manifest(self, name, reference, fat=False, **kwargs):
+        return self._manifest(name, reference, fat)\
+                   .request('GET', **kwargs)
+
+    def put_manifest(self, name, reference, manifest, **kwargs):
+        return self._manifest(name, reference)\
+                   .request('PUT', json=manifest, **kwargs)
 
     def del_manifest(self, name, reference, **kwargs):
-        return self._manifest(name, reference).json('DELETE', **kwargs)
+        return self._manifest(name, reference)\
+                   .request('DELETE', **kwargs)
 
 
 class Image:
@@ -319,7 +331,7 @@ class Manifest:
 
     @property
     def layers(self):
-        return self._raw.get('fsLayers', None)
+        return self._raw.get('fsLayers', self._raw.get('layers', None))
 
     @property
     def history(self):

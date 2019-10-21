@@ -43,8 +43,8 @@ class TopLevelCommand(Command):
 
     > Utilice `aysa COMMAND (-h|--help)` para ver la `ayuda` especifica del comando.
     """
-    def __init__(self, options=None, **kwargs):
-        super().__init__('aysa', options, **kwargs)
+    def __init__(self, options=None, logger=None, **kwargs):
+        super().__init__('aysa', options, logger=logger, **kwargs)
 
     commands = {
         'image': ImageCommand,
@@ -57,12 +57,14 @@ class TopLevelCommand(Command):
 # dispatch
 def main():
     try:
-        TopLevelCommand({'version': __version__})()
+        #from http.client import HTTPConnection
+        #HTTPConnection.debuglevel = 1
+        TopLevelCommand({'version': __version__}, log)()
         sys.exit(0)
     except KeyboardInterrupt:
         log.error("Aborting.")
     except Exception as e:
         log.error(e)
-        # import traceback
-        # traceback.print_exc()
+        #import traceback
+        #traceback.print_exc()
     sys.exit(1)
