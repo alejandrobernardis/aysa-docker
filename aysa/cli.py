@@ -7,7 +7,7 @@ import sys
 import logging
 from aysa import __version__
 from aysa.commands import Command
-from aysa.commands.registry import ImageCommand
+from aysa.commands.registry import ImageCommand, ReleaseCommand
 
 
 # logger
@@ -48,7 +48,7 @@ class TopLevelCommand(Command):
 
     commands = {
         'image': ImageCommand,
-        'release': None,
+        'release': ReleaseCommand,
         'deploy': None,
         'config': None
     }

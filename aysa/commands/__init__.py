@@ -52,6 +52,10 @@ def env_helper(filename=None):
                       '`registry`, `development` y `quality`.')
 
 
+def is_yes(value):
+    return str(value).lower() in ('true', 'yes', 'si', 'y', 's', '1')
+
+
 class Command:
     def __init__(self, command, options=None, **kwargs):
         self.output = Printer()
@@ -151,6 +155,35 @@ class Command:
 
     def done(self):
         self.output.done()
+
+    def input(self, message=None, recursive=False, default=None, values=None,
+              cast=None):
+        if not isinstance(message, str):
+            message = 'Por favor, ingrese un valor'
+        else:
+            message = message.strip()
+        if not message.endswith(':'):
+            message += ': '
+        if values or default:
+            if not values:
+                values = default
+            message = '{} [{}]: '.format(message[:-2], str(values))
+        value = input(message).strip()
+        if default is not None and not value:
+            return default
+        if cast is not None:
+            try:
+                value = cast(value)
+            except:
+                if recursive is True:
+                    return self.input(message, recursive, default, cast)
+                raise SystemExit('El valor ingresado no es correcto: ' + value)
+        return value
+
+    def yes(self, message=None):
+        if message is None:
+            message = 'Desea continuar?'
+        return is_yes(self.input(message, default='N', values='N/y'))
 
 
 class NoSuchCommand(Exception):

@@ -264,8 +264,8 @@ class Api:
     def get_manifest(self, name, reference):
         return self._manifest(name, reference).json('GET')
 
-    def put_manifest(self, name, reference, **kwargs):
-        return self._manifest(name, reference).json('PUT', **kwargs)
+    def put_manifest(self, name, reference, json):
+        return self._manifest(name, reference).json('PUT', json=json)
 
     def del_manifest(self, name, reference, **kwargs):
         return self._manifest(name, reference).json('DELETE', **kwargs)

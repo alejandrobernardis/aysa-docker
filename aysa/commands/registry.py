@@ -6,6 +6,7 @@
 from aysa import WILDCARD
 from aysa.commands import Command
 from aysa.docker.registry import Api, Image
+from functools import partialmethod
 
 
 class _RegistryCommand(Command):
@@ -101,9 +102,8 @@ class ImageCommand(_RegistryCommand):
         Usage: put SOURCE_IMAGE_TAG TARGET_TAG
         """
         src = Image(self._fix_image_name(kwargs['source_image_tag']))
-        dst = kwargs['target_tag']
-        manifest = self.api.slim_manifest(src.repository, src.tag)
-        self.api.put_manifest(src.repository, dst, json=manifest)
+        json = self.api.slim_manifest(src.repository, src.tag)
+        self.api.put_manifest(src.repository, kwargs['target_tag'], json=json)
 
     def delete(self, **kwargs):
         """
@@ -114,4 +114,38 @@ class ImageCommand(_RegistryCommand):
         Opciones:
             -y, --yes    Responde "SI" a todas las preguntas.
         """
-        print(kwargs)
+        if kwargs['--yes'] is True or self.yes():
+            for x in kwargs['image_tag']:
+                src = Image(self._fix_image_name(x))
+                self.api.del_manifest(src.repository, src.tag)
+
+
+class ReleaseCommand(_RegistryCommand):
+    """
+    Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
+
+    Usage: release COMMAND [ARGS...]
+
+    Comandos disponibles:
+        test    Crea las `imágenes` para el entorno de `QA/TESTING`.
+        prod    Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
+    """
+    def _release(self, tag, **kwargs):
+        for x in self._list(kwargs['image']):
+            self.output.write(x)
+
+    def test(self, **kwargs):
+        """
+        Crea las `imágenes` para el entorno de `QA/TESTING`.
+
+        Usage: test [IMAGE...]
+        """
+        self._release('rc', **kwargs)
+
+    def prod(self, **kwargs):
+        """
+        Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
+
+        Usage: prod [IMAGE...]
+        """
+        self._release('latest', **kwargs)
