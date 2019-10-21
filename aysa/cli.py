@@ -7,6 +7,8 @@ import sys
 import logging
 from aysa import __version__
 from aysa.commands import Command
+from aysa.commands.config import ConfigCommand
+from aysa.commands.deploy import DeployCommand
 from aysa.commands.registry import ImageCommand, ReleaseCommand
 
 
@@ -46,11 +48,12 @@ class TopLevelCommand(Command):
     def __init__(self, options=None, logger=None, **kwargs):
         super().__init__('aysa', options, logger=logger, **kwargs)
 
+    # Hacerlo dinámico !!!! ;)
     commands = {
         'image': ImageCommand,
         'release': ReleaseCommand,
-        'deploy': None,
-        'config': None
+        'deploy': DeployCommand,
+        'config': ConfigCommand
     }
 
 
@@ -65,6 +68,6 @@ def main():
         log.error("Aborting.")
     except Exception as e:
         log.error(e)
-        #import traceback
-        #traceback.print_exc()
+        import traceback
+        traceback.print_exc()
     sys.exit(1)

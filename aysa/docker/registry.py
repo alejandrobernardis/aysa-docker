@@ -45,9 +45,10 @@ def remove_registry(value):
 
 
 def get_tag(value):
+    value = remove_registry(value)
     if TAG_SEP not in value:
         return None
-    return remove_registry(value).rsplit(TAG_SEP, 1)[-1]
+    return value.rsplit(TAG_SEP, 1)[-1]
 
 
 def get_repository(value):

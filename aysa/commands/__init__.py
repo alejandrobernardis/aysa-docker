@@ -12,6 +12,7 @@ from configparser import ConfigParser, ExtendedInterpolation
 
 CONST_COMMAND = 'COMMAND'
 CONST_ARGS = 'ARGS'
+ENV_FILE = '~/.aysa/config.ini'
 
 
 def docopt_helper(docstring, *args, **kwargs):
@@ -43,10 +44,10 @@ class ConfigObject(ConfigParser):
 
 
 def env_helper(filename=None):
-    filepath = Path(filename or '~/.aysa/config.ini').expanduser()
+    filepath = Path(filename or ENV_FILE).expanduser()
     parser = ConfigObject(interpolation=ExtendedInterpolation())
     if parser.read(filepath, encoding='utf-8'):
-        return parser
+        return parser, filepath
     raise CommandExit('Es necesario definir el archivo "~/.aysa/config.ini", '
                       'con las configuración de los diferentes "endpoints": '
                       '`registry`, `development` y `quality`.')
@@ -152,7 +153,14 @@ class Command:
         raise NoSuchCommand(command)
 
     def env_load(self):
-        self.env = env_helper(self.env_file).to_dict()
+        env, _ = env_helper(self.env_file)
+        self.env = env.to_dict()
+
+    def env_save(self, data=None):
+        env, filepath = env_helper(self.env_file)
+        env.read_dict(data or self.env)
+        with filepath.open('w') as output:
+            env.write(output)
 
     def __call__(self, argv=None, *args, **kwargs):
         return self.parse(argv, *args, **kwargs)

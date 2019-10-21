@@ -79,13 +79,13 @@ class ImageCommand(_RegistryCommand):
             -t tags, --filter-tags=tags     Lista de `tags` separados por comas,
                                             ex: "dev,rc,latest" [default: *]
         """
+        tmpl = ' - {} = {}'
         verbose = kwargs.get('--verbose', False)
         manifest = kwargs.get('--manifest', False)
         self.output.head('Lista de `tags`:')
         for x in self._list(kwargs['image'], kwargs['--filter-tags']):
             self.output.bullet(x.repository, x.tag, tmpl='{}:{}')
             if verbose or manifest:
-                tmpl = ' - {} = {}'
                 m = self.api.manifest(x.repository, x.tag, True, True)
                 if verbose and not manifest:
                     self.output.write('created', m.created, tmpl=tmpl)
@@ -126,10 +126,7 @@ class ReleaseCommand(_RegistryCommand):
     """
     Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
 
-    Usage: release [options] COMMAND [ARGS...]
-
-    Opciones:
-        -y, --yes    Responde "SI" a todas las preguntas.
+    Usage: release COMMAND [ARGS...]
 
     Comandos disponibles:
         test    Crea las `imágenes` para el entorno de `QA/TESTING`.
@@ -150,7 +147,10 @@ class ReleaseCommand(_RegistryCommand):
         """
         Crea las `imágenes` para el entorno de `QA/TESTING`.
 
-        Usage: test [IMAGE...]
+        Usage: test [options] [IMAGE...]
+
+        Opciones:
+            -y, --yes    Responde "SI" a todas las preguntas.
         """
         self._release('dev', 'rc', **kwargs)
 
@@ -158,6 +158,9 @@ class ReleaseCommand(_RegistryCommand):
         """
         Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
 
-        Usage: prod [IMAGE...]
+        Usage: prod [options] [IMAGE...]
+
+        Opciones:
+            -y, --yes    Responde "SI" a todas las preguntas.
         """
         self._release('rc', 'latest', **kwargs)

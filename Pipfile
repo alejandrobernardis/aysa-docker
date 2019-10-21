@@ -8,6 +8,7 @@ verify_ssl = false
 [packages]
 requests = "*"
 docopt = "*"
+fabric = "*"
 
 [requires]
 python_version = "3.7"
