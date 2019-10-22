@@ -9,23 +9,35 @@ from functools import lru_cache
 from fabric import Connection
 from aysa.commands import Command
 
-
-rx_item = re.compile(r'^[a-z](?:[\w_])+_\d{1,3}\s{2,}[a-z0-9](?:[\w.-]+)(?::\d{1,5})'
-                     r'?/[a-z0-9](?:[\w.-/])*\s{2,}(?:[a-z][\w.-]*)\s', re.I)
+DEVELOPMENT = 'development'
+QUALITY = 'quality'
+rx_item = re.compile(r'^[a-z](?:[\w_])+_\d{1,3}\s{2,}[a-z0-9](?:[\w.-]+)'
+                     r'(?::\d{1,5})?/[a-z0-9](?:[\w.-/])*\s{2,}'
+                     r'(?:[a-z][\w.-]*)\s', re.I)
 rx_service = re.compile(r'^[a-z](?:[\w_])+$', re.I)
 
 
 class _ConnectionCommand(Command):
     def execute(self, command, argv=None, global_args=None, **kwargs):
         super().execute(command, argv, global_args, **kwargs)
-        self.cnx.close()
+        self.s_close()
 
     _stage = None
+    _stages = (DEVELOPMENT, QUALITY)
     _connection_cache = None
 
-    def _connection(self, stage=None):
+    def s_close(self):
+        if self._connection_cache is not None:
+            self._connection_cache.close()
+            self._connection_cache = None
+            self._stage = None
+
+    def s_connection(self, stage=None):
+        if self._stage and stage != self._stage:
+            self.s_close()
         if self._connection_cache is None:
             env = self.env[stage]
+            env.pop('path', None)
             if env['user'].lower() == 'root':
                 raise SystemExit('El usuario "root" no está permitido para '
                                  'ejecutar despliegues.')
@@ -38,11 +50,10 @@ class _ConnectionCommand(Command):
     @property
     def cnx(self):
         if self._stage and self._connection_cache is None:
-            self._connection(self._stage)
+            self.s_connection(self._stage)
         return self._connection_cache
 
     def run(self, command, hide=False, **kwargs):
-        self.output.bullet(command)
         return self.cnx.run(command, hide=hide, **kwargs)
 
     def _list(self, cmd, filter_line=None, obj=None):
@@ -56,6 +67,20 @@ class _ConnectionCommand(Command):
     def _get_service(self, value, sep='_'):
         return sep.join(value.split(sep)[1:-1])
 
+    def _get_strlist(self, values, sep=' '):
+        return sep.join((x for x in values))
+
+    # def _get_environ(self, values):
+    #     return (x for x in self._stages if values.get('--' + x, False))
+
+    def _get_environ(self, values, cnx=True):
+        for x in self._stages:
+            if not values.get('--' + x, False):
+                continue
+            if cnx is True:
+                self.s_connection(x)
+            yield x
+
 
 class DeployCommand(_ConnectionCommand):
     """
@@ -64,12 +89,15 @@ class DeployCommand(_ConnectionCommand):
     Usage: deploy COMMAND [ARGS...]
 
     Comandos disponibles:
-        deve    Despliegue en el entorno de `DESARROLLO`.
-        test    Despliegue en el entorno de `QA/TESTING`.
+        ls      Lista los servicios disponibles.
+        up      Crea e inicia los servicios en uno o más entornos.
+        down    Detiene y elimina los servicios en uno o más entornos.
+        prune   Purga los servicios en uno o más entornos.
     """
     def _deploy(self, stage, **kwargs):
         # establecemos la conexión
-        self._connection(stage)
+        if stage is not None:
+            self._connection(stage)
 
         # servicios a purgar
         images = []
@@ -84,7 +112,7 @@ class DeployCommand(_ConnectionCommand):
                        if x in kwargs['service']]
 
         # 3. buscar los contenedore e imágenes
-        cmd = "docker-compose images " # | awk '{print $1 \";\" $2 \":\" $3}'"
+        cmd = "docker-compose images "
 
         for line in self._list(cmd, rx_item):
             container, image, tag = line.split()[:3]
@@ -94,14 +122,14 @@ class DeployCommand(_ConnectionCommand):
 
         # # 4. eliminar los servicios
         try:
-            srv = ' '.join((x for x in service))
+            srv = self._get_strlist(services)
             self.run('yes | docker-compose rm {}'.format(srv))
-        except:
+        except Exception as e:
             pass
 
         # # 5. eliminar las imágenes
         try:
-            srv = ' '.join((x for x in images))
+            srv = self._get_strlist(images)
             self.run('yes | docker rmi -f {}'.format(srv))
         except:
             pass
@@ -109,33 +137,74 @@ class DeployCommand(_ConnectionCommand):
         # 6. deplegar
         self.run('docker-compose up -d')
 
-    def deve(self, **kwargs):
+    def up(self, **kwargs):
         """
-        Despliegue en el entorno de `DESARROLLO`.
+        Crea e inicia los servicios en uno o más entornos.
 
-        Usage: deve [SERVICE...]
+        Usage: up [options] [SERVICE...]
+
+        Opciones
+            -d, --development       Entorno de `DESARROLLO`
+            -q, --quality           Entorno de `QA/TESTING`
         """
-        self._deploy('development', **kwargs)
+        for x in self._get_environ(kwargs):
+            self._deploy(None, **kwargs)
 
-    def test(self, **kwargs):
+    def down(self, **kwargs):
         """
-        Despliegue en el entorno de `QA/TESTING`.
+        Crea e inicia los servicios en uno o más entornos.
 
-        Usage: test [SERVICE...]
+        Usage: down [options] [SERVICE...]
+
+        Opciones
+            -d, --development       Entorno de `DESARROLLO`
+            -q, --quality           Entorno de `QA/TESTING`
         """
-        self._deploy('quality', **kwargs)
+        for x in self._get_environ(kwargs):
+            self.run('docker-compose down')
+
+    def prune(self, **kwargs):
+        """
+        Purga los servicios en uno o más entornos.
+
+        Usage: prune [options] [SERVICE...]
+
+        Opciones
+            -d, --development       Entorno de `DESARROLLO`
+            -q, --quality           Entorno de `QA/TESTING`
+        """
+        for x in self._get_environ(kwargs):
+            self.run('docker-compose down')
+            self.run('docker rmi -f $(docker images -q)')
 
 
-class ServiceCommand(_ConnectionCommand):
-    """
-    ...
+    def ls(self, **kwargs):
+        """
+        Lista los servicios disponibles.
 
-    Usage: service COMMAND [ARGS...]
+        Usage: ls [options]
 
-    Comandos disponibles:
-        ls         ...
-        ps         ...
-        stop       ...
-        start      ...
-        restart    ...
-    """
+        Opciones
+            -d, --development       Entorno de `DESARROLLO`
+            -q, --quality           Entorno de `QA/TESTING`
+        """
+        for x in self._get_environ(kwargs):
+            self.output.title(x)
+            for line in self._list("docker-compose ps --services", rx_service):
+                self.output.bullet(line)
+            self.output.blank()
+
+    def ps(self, **kwargs):
+        """
+        Lista los servicios disponibles.
+
+        Usage: ps [options]
+
+        Opciones
+            -d, --development       Entorno de `DESARROLLO`
+            -q, --quality           Entorno de `QA/TESTING`
+        """
+        for x in self._get_environ(kwargs):
+            self.output.title(x)
+            self.run("docker-compose ps")
+            self.output.blank()

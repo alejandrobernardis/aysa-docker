@@ -37,11 +37,11 @@ class TopLevelCommand(Command):
                                                 `<protocol>://<username>:<password>@<host>:<port>`
 
     Comandos disponibles:
-        image       Lista las `imágenes` y administra los `tags` del `repositorio`.
-        release     Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
-        deploy      Despliega las `imágenes` en los entornos de `DESARROLLO` y `QA/TESTING`.
         config      Lista y administra los valores de la configuración del entorno de trabajo
                     definido por el archivo `~/.aysa/config.ini`
+        deploy      Despliega las `imágenes` en los entornos de `DESARROLLO` y `QA/TESTING`.
+        image       Lista las `imágenes` y administra los `tags` del `repositorio`.
+        release     Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
 
     > Utilice `aysa COMMAND (-h|--help)` para ver la `ayuda` especifica del comando.
     """
@@ -50,10 +50,10 @@ class TopLevelCommand(Command):
 
     # Hacerlo dinámico !!!! ;)
     commands = {
-        'image': ImageCommand,
-        'release': ReleaseCommand,
+        'config': ConfigCommand,
         'deploy': DeployCommand,
-        'config': ConfigCommand
+        'image': ImageCommand,
+        'release': ReleaseCommand
     }
 
 

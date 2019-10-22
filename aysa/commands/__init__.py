@@ -17,11 +17,16 @@ ENV_FILE = '~/.aysa/config.ini'
 
 def docopt_helper(docstring, *args, **kwargs):
     try:
-        if not isinstance(docstring, str):
-            docstring = getdoc(docstring)
+        docstring = doc_helper(docstring)
         return docopt(docstring, *args, **kwargs), docstring
     except DocoptExit:
         raise CommandExit(docstring)
+
+
+def doc_helper(docstring):
+    if not isinstance(docstring, str):
+        docstring = getdoc(docstring)
+    return ' \n{}\n\n '.format(docstring)
 
 
 class AttrDict(dict):
@@ -119,7 +124,7 @@ class Command:
 
         try:
             scmd = self.find_command(cmd)
-            sdoc = getdoc(scmd)
+            sdoc = doc_helper(scmd)
         except NoSuchCommand:
             raise CommandExit(doc)
 
@@ -223,16 +228,17 @@ class Printer:
             value = tmpl.format(*values)
         else:
             value = sep.join([str(x) for x in values])
-        if kwargs.pop('title', False):
-            value = value.title()
         if kwargs.pop('lower', False):
             value = value.lower()
         if kwargs.pop('upper', False):
             value = value.upper()
+        if kwargs.pop('title', False):
+            value = value.title()
         end = '\n' if not end and endx else end
         if end and (not value.endswith(end) or endx is not None):
-            return '{}{}'.format(value, end * (endx or 1))
-        return value
+            end = end * (endx or 1)
+        tab = ' ' * kwargs.pop('tab', 0)
+        return tab + value + end
 
     def done(self):
         self.flush('Done.', endx=3)
