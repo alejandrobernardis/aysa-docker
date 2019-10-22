@@ -5,6 +5,7 @@
 
 import re
 from pathlib import Path
+from functools import lru_cache
 from fabric import Connection
 from aysa.commands import Command
 
@@ -50,6 +51,10 @@ class _ConnectionCommand(Command):
                 continue
             yield obj(line) if obj is not None else line
 
+    @lru_cache()
+    def _get_service(self, value, sep='_'):
+        return sep.join(value.split(sep)[1:-1])
+
 
 class DeployCommand(_ConnectionCommand):
     """
@@ -73,28 +78,33 @@ class DeployCommand(_ConnectionCommand):
 
         # 2. buscar los servicios
         cmd = "docker-compose ps --services"
-
-        for line in self._list(cmd, rx_service):
-            self.output.write(line)  # < FIXME / TODO >
-
-        service = ';'.join('dashboard_%s_1' % x for x in kwargs['service'])
+        service = [x for x in self._list(cmd, rx_service)
+                      if x in kwargs['service']]
 
         # 3. buscar los contenedore e imágenes
         cmd = "docker-compose images | awk '{print $1 \";\" $2 \":\" $3}'"
 
         for line in self._list(cmd, rx_item):
             container, _, image = line.partition(';')
-            if service and container not in service:
+            container_service = self._get_service(container)
+            if service and container_service not in service:
                 continue
-            services.append((container, image))
+            services.append((container_service, image))
+            self.output.write(line)
 
         # 4. eliminar los servicios
-        self.run('docker-compose rm {}'
-                 .format(' '.join((x[0] for x in services))))
+        try:
+            self.run('yes | docker-compose rm {}'
+                     .format(' '.join((x[0] for x in services))))
+        except:
+            pass
 
         # 5. eliminar las imágenes
-        self.run('docker-compose rmi -f {}'
-                 .format(' '.join((x[1] for x in services))))
+        try:
+            self.run('yes | docker rmi -f {}'
+                     .format(' '.join((x[1] for x in services))))
+        except:
+            pass
 
         # 6. deplegar
         self.run('docker-compose up -d')
