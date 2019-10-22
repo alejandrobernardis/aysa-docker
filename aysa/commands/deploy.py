@@ -10,8 +10,8 @@ from fabric import Connection
 from aysa.commands import Command
 
 
-rx_item = re.compile(r'^[a-z](?:[\w_])+_\d{1,3};[a-z0-9](?:[\w.-]+)(?::\d{1,5})'
-                     r'?/[a-z0-9](?:[\w.-/])*(?::[a-z][\w.-]*)', re.I)
+rx_item = re.compile(r'^[a-z](?:[\w_])+_\d{1,3}\s{2,}[a-z0-9](?:[\w.-]+)(?::\d{1,5})'
+                     r'?/[a-z0-9](?:[\w.-/])*\s{2,}(?:[a-z][\w.-]*)\s', re.I)
 rx_service = re.compile(r'^[a-z](?:[\w_])+$', re.I)
 
 
@@ -42,10 +42,11 @@ class _ConnectionCommand(Command):
         return self._connection_cache
 
     def run(self, command, hide=False, **kwargs):
+        self.output.bullet(command)
         return self.cnx.run(command, hide=hide, **kwargs)
 
     def _list(self, cmd, filter_line=None, obj=None):
-        response = self.cnx.run(cmd, hide=True)
+        response = self.run(cmd, hide=True)
         for line in response.stdout.splitlines():
             if filter_line and not filter_line.match(line):
                 continue
@@ -71,6 +72,7 @@ class DeployCommand(_ConnectionCommand):
         self._connection(stage)
 
         # servicios a purgar
+        images = []
         services = []
 
         # 1. detener los servicios
@@ -78,31 +80,29 @@ class DeployCommand(_ConnectionCommand):
 
         # 2. buscar los servicios
         cmd = "docker-compose ps --services"
-        service = [x for x in self._list(cmd, rx_service)
-                      if x in kwargs['service']]
+        services = [x for x in self._list(cmd, rx_service)
+                       if x in kwargs['service']]
 
         # 3. buscar los contenedore e imágenes
-        cmd = "docker-compose images | awk '{print $1 \";\" $2 \":\" $3}'"
+        cmd = "docker-compose images " # | awk '{print $1 \";\" $2 \":\" $3}'"
 
         for line in self._list(cmd, rx_item):
-            container, _, image = line.partition(';')
-            container_service = self._get_service(container)
-            if service and container_service not in service:
+            container, image, tag = line.split()[:3]
+            if services and self._get_service(container) not in services:
                 continue
-            services.append((container_service, image))
-            self.output.write(line)
+            images.append('{}:{}'.format(image, tag))
 
-        # 4. eliminar los servicios
+        # # 4. eliminar los servicios
         try:
-            self.run('yes | docker-compose rm {}'
-                     .format(' '.join((x[0] for x in services))))
+            srv = ' '.join((x for x in service))
+            self.run('yes | docker-compose rm {}'.format(srv))
         except:
             pass
 
-        # 5. eliminar las imágenes
+        # # 5. eliminar las imágenes
         try:
-            self.run('yes | docker rmi -f {}'
-                     .format(' '.join((x[1] for x in services))))
+            srv = ' '.join((x for x in images))
+            self.run('yes | docker rmi -f {}'.format(srv))
         except:
             pass
 
