@@ -9,8 +9,9 @@ from fabric import Connection
 from aysa.commands import Command
 
 
-rx_line = re.compile(r'^[a-z](?:[\w_])+_\d{1,3};[a-z0-9](?:[\w.-]+)(?::\d{1,5})'
+rx_item = re.compile(r'^[a-z](?:[\w_])+_\d{1,3};[a-z0-9](?:[\w.-]+)(?::\d{1,5})'
                      r'?/[a-z0-9](?:[\w.-/])*(?::[a-z][\w.-]*)', re.I)
+rx_service = re.compile(r'^[a-z](?:[\w_])+$', re.I)
 
 
 class _ConnectionCommand(Command):
@@ -70,23 +71,32 @@ class DeployCommand(_ConnectionCommand):
         # 1. detener los servicios
         self.run('docker-compose stop')
 
-        # 2. buscar los servicios y sus imágenes
-        cmd = "docker-compose images | awk '{print $1 \";\" $2 \":\" $3}'"
-        service = kwargs['service']
+        # 2. buscar los servicios
+        cmd = "docker-compose ps --services"
 
-        for line in self._list(cmd, rx_line):
+        for line in self._list(cmd, rx_service):
+            self.output.write(line)  # < FIXME / TODO >
+
+        service = ';'.join('dashboard_%s_1' % x for x in kwargs['service'])
+
+        # 3. buscar los contenedore e imágenes
+        cmd = "docker-compose images | awk '{print $1 \";\" $2 \":\" $3}'"
+
+        for line in self._list(cmd, rx_item):
             container, _, image = line.partition(';')
+            if service and container not in service:
+                continue
             services.append((container, image))
 
-        # 3. eliminar los servicios
+        # 4. eliminar los servicios
         self.run('docker-compose rm {}'
                  .format(' '.join((x[0] for x in services))))
 
-        # 4. eliminar las imágenes
+        # 5. eliminar las imágenes
         self.run('docker-compose rmi -f {}'
                  .format(' '.join((x[1] for x in services))))
 
-        # 5. deplegar
+        # 6. deplegar
         self.run('docker-compose up -d')
 
     def deve(self, **kwargs):
