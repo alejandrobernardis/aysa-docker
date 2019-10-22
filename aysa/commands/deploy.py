@@ -18,10 +18,6 @@ rx_service = re.compile(r'^[a-z](?:[\w_])+$', re.I)
 
 
 class _ConnectionCommand(Command):
-    def execute(self, command, argv=None, global_args=None, **kwargs):
-        super().execute(command, argv, global_args, **kwargs)
-        self.s_close()
-
     _stage = None
     _stages = (DEVELOPMENT, QUALITY)
     _connection_cache = None
@@ -46,6 +42,9 @@ class _ConnectionCommand(Command):
             self._connection_cache = Connection(**env)
             self._stage = stage
         return self._connection_cache
+
+    def on_finish(self, *args, **kwargs):
+        self.s_close()
 
     @property
     def cnx(self):
@@ -79,7 +78,9 @@ class _ConnectionCommand(Command):
                 continue
             if cnx is True:
                 self.s_connection(x)
+            self.output.title(x)
             yield x
+            self.output.blank()
 
 
 class DeployCommand(_ConnectionCommand):
@@ -174,8 +175,8 @@ class DeployCommand(_ConnectionCommand):
             -q, --quality           Entorno de `QA/TESTING`
         """
         for x in self._get_environ(kwargs):
-            self.run('docker-compose down')
-            self.run('docker rmi -f $(docker images -q)')
+            self.down(**kwargs)
+            # self.run('docker rmi -f $(docker images -q)')
 
 
     def ls(self, **kwargs):
@@ -189,10 +190,8 @@ class DeployCommand(_ConnectionCommand):
             -q, --quality           Entorno de `QA/TESTING`
         """
         for x in self._get_environ(kwargs):
-            self.output.title(x)
             for line in self._list("docker-compose ps --services", rx_service):
-                self.output.bullet(line)
-            self.output.blank()
+                self.output.bullet(line, tab=1)
 
     def ps(self, **kwargs):
         """
@@ -205,6 +204,4 @@ class DeployCommand(_ConnectionCommand):
             -q, --quality           Entorno de `QA/TESTING`
         """
         for x in self._get_environ(kwargs):
-            self.output.title(x)
             self.run("docker-compose ps")
-            self.output.blank()

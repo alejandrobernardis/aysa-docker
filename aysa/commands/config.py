@@ -28,17 +28,16 @@ class ConfigCommand(Command):
 
         Usage: ls [SECTION...]
         """
-        tmpl = '  {} = "{}"'
         sections_filter = kwargs['section']
         self.output.blank()
         for s, sv in self.env.items():
             if sections_filter and s not in sections_filter:
                 continue
-            self.output.bullet(s, upper=True)
+            self.output.write(s, tmpl='[{}]:', upper=True)
             for k, v in sv.items():
                 if k == CREDENTIALS and v:
                     v = '{}:******'.format(v.split(':')[0])
-                self.output.write(k, v, tmpl=tmpl)
+                self.output.write(k, v, tmpl='{} = "{}"', tab=2)
             self.output.blank()
 
     def update(self, **kwargs):

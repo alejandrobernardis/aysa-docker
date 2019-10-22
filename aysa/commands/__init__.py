@@ -71,6 +71,7 @@ class Command:
         self.parent = kwargs.pop('parent', None)
         self._logger = kwargs.pop('logger', None)
         self._env = None
+        self.on_init(**kwargs)
 
     @property
     def top_level(self):
@@ -146,7 +147,9 @@ class Command:
         self.env_load()
 
         command(**opt, global_args=global_args)
-        self.output.foot()
+
+        self.on_finish()
+        self.done()
 
     def find_command(self, command):
         try:
@@ -157,24 +160,11 @@ class Command:
             pass
         raise NoSuchCommand(command)
 
-    def env_load(self):
-        env, _ = env_helper(self.env_file)
-        self.env = env.to_dict()
-
-    def env_save(self, data=None):
-        env, filepath = env_helper(self.env_file)
-        env.read_dict(data or self.env)
-        with filepath.open('w') as output:
-            env.write(output)
-
     def __call__(self, argv=None, *args, **kwargs):
         return self.parse(argv, *args, **kwargs)
 
     def __str__(self):
         return '<Command="{}">'.format(self.command)
-
-    def done(self):
-        self.output.done()
 
     def input(self, message=None, recursive=False, default=None, values=None,
               cast=None):
@@ -205,6 +195,25 @@ class Command:
             message = 'Desea continuar?'
         return is_yes(self.input(message, default='N', values='N/y'))
 
+    def env_load(self):
+        env, _ = env_helper(self.env_file)
+        self.env = env.to_dict()
+
+    def env_save(self, data=None):
+        env, filepath = env_helper(self.env_file)
+        env.read_dict(data or self.env)
+        with filepath.open('w') as output:
+            env.write(output)
+
+    def done(self):
+        self.output.done()
+
+    def on_init(self, *args, **kwargs):
+        pass
+
+    def on_finish(self, *args, **kwargs):
+        pass
+
 
 class NoSuchCommand(Exception):
     def __init__(self, command):
@@ -224,24 +233,26 @@ class Printer:
 
     def _parse(self, *values, sep=' ', end='\n', endx=None, **kwargs):
         tmpl = kwargs.pop('tmpl', None)
-        if tmpl is not None:
-            value = tmpl.format(*values)
-        else:
-            value = sep.join([str(x) for x in values])
+        value = tmpl.format(*values) if tmpl is not None else \
+                 sep.join([str(x) for x in values])
         if kwargs.pop('lower', False):
             value = value.lower()
         if kwargs.pop('upper', False):
             value = value.upper()
         if kwargs.pop('title', False):
             value = value.title()
-        end = '\n' if not end and endx else end
-        if end and (not value.endswith(end) or endx is not None):
-            end = end * (endx or 1)
+        if endx is not None:
+            end = '\n' * (endx or 1)
+        if end and not value.endswith(end):
+            end = '\n'
         tab = ' ' * kwargs.pop('tab', 0)
         return tab + value + end
 
     def done(self):
         self.flush('Done.', endx=3)
+
+    def error(self):
+        self.flush('Error.', endx=3)
 
     def error(self, *message, **kwargs):
         kwargs['icon'] = '!'
@@ -280,6 +291,9 @@ class Printer:
         value = self._parse(*values, **kwargs)
         if value:
             self.output.write(value)
+
+    def print(self, *values, **kwargs):
+        self.write(*values, **kwargs)
 
     def flush(self, *values, **kwargs):
         if values:
