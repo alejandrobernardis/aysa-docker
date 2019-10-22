@@ -3,30 +3,14 @@
 # Created: 2019/10/21
 # ~
 
-"""
-    _services = partialmethod(
-        _list,
-        cmd="docker-compose ps --services",
-        filter_line=rx_service
-    )
-
-    _running = partialmethod(
-        _list,
-        cmd="docker-compose ps | grep -P '\s{2,}Up' | awk '{print $1}'",
-        filter_line=rx_container
-    )
-"""
-
 import re
 from pathlib import Path
 from fabric import Connection
 from aysa.commands import Command
-from aysa.docker.registry import Image
-from functools import partial, partialmethod
 
-# rx_service = re.compile(r'^[a-z](?:[\w_])+$', re.I)
-# rx_image = re.compile(r'^(localhost|[\w\-]+(\.[\w\-]+)+)(?::\d{1,5})?\/', re.I)
-# rx_container = re.compile(r'^[a-z](?:[\w_])+\d{1,3}$', re.I)
+
+rx_line = re.compile(r'^[a-z](?:[\w_])+_\d{1,3};[a-z0-9](?:[\w.-]+)(?::\d{1,5})'
+                     r'?/[a-z0-9](?:[\w.-/])*(?::[a-z][\w.-]*)', re.I)
 
 
 class _ConnectionCommand(Command):
@@ -39,22 +23,24 @@ class _ConnectionCommand(Command):
 
     def _connection(self, stage=None):
         if self._connection_cache is None:
-            env = self.env[stage or self._stage]
+            env = self.env[stage]
             if env['user'].lower() == 'root':
                 raise SystemExit('El usuario "root" no está permitido para '
                                  'ejecutar despliegues.')
             pkey = Path(env.pop('pkey', None)).expanduser()
             env['connect_kwargs'] = {'key_filename': str(pkey)}
             self._connection_cache = Connection(**env)
+            self._stage = stage
         return self._connection_cache
 
     @property
     def cnx(self):
+        if self._stage and self._connection_cache is None:
+            self._connection(self._stage)
         return self._connection_cache
 
     def run(self, command, hide=False, **kwargs):
-        #return self.cnx.run(command, hide=hide, **kwargs)
-        print(command)
+        return self.cnx.run(command, hide=hide, **kwargs)
 
     def _list(self, cmd, filter_line=None, obj=None):
         response = self.cnx.run(cmd, hide=True)
@@ -62,12 +48,6 @@ class _ConnectionCommand(Command):
             if filter_line and not filter_line.match(line):
                 continue
             yield obj(line) if obj is not None else line
-
-    _services = partialmethod(
-        _list,
-        cmd="docker-compose images | awk '{print $1 \";\" $2 \":\" $3}'",
-        filter_line=None
-    )
 
 
 class DeployCommand(_ConnectionCommand):
@@ -80,9 +60,9 @@ class DeployCommand(_ConnectionCommand):
         deve    Despliegue en el entorno de `DESARROLLO`.
         test    Despliegue en el entorno de `QA/TESTING`.
     """
-    def _deploy(self, **kwargs):
+    def _deploy(self, stage, **kwargs):
         # establecemos la conexión
-        cnx = self._connection()
+        self._connection(stage)
 
         # servicios a purgar
         services = []
@@ -91,12 +71,12 @@ class DeployCommand(_ConnectionCommand):
         self.run('docker-compose stop')
 
         # 2. buscar los servicios y sus imágenes
-        lines = self.run("docker-compose images "
-                         "| awk '{print $1 \";\" $2 \":\" $3}'")
+        cmd = "docker-compose images | awk '{print $1 \";\" $2 \":\" $3}'"
+        service = kwargs['service']
 
-        # for line in lines.stdout.splitlines():
-        #     container, _, image = line.partition(';')
-        #     services.append((container, image))
+        for line in self._list(cmd, rx_line):
+            container, _, image = line.partition(';')
+            services.append((container, image))
 
         # 3. eliminar los servicios
         self.run('docker-compose rm {}'
@@ -115,8 +95,7 @@ class DeployCommand(_ConnectionCommand):
 
         Usage: deve [SERVICE...]
         """
-        self._stage = 'development'
-        self._deploy(**kwargs)
+        self._deploy('development', **kwargs)
 
     def test(self, **kwargs):
         """
@@ -124,8 +103,7 @@ class DeployCommand(_ConnectionCommand):
 
         Usage: test [SERVICE...]
         """
-        self._stage = 'quality'
-        self._deploy(**kwargs)
+        self._deploy('quality', **kwargs)
 
 
 class ServiceCommand(_ConnectionCommand):
