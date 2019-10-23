@@ -57,7 +57,7 @@ class ImageCommand(_RegistryCommand):
     """
     Administra los `tags` para el despliegue de los servicios.
 
-    Usage: image COMMAND [ARGS...]
+    Usage: registry COMMAND [ARGS...]
 
     Comandos disponibles:
         ls        Lista los `tags` diponibles en el `repositorio`.
@@ -82,7 +82,9 @@ class ImageCommand(_RegistryCommand):
         tmpl = ' - {} = {}'
         verbose = kwargs.get('--verbose', False)
         manifest = kwargs.get('--manifest', False)
-        self.output.head('Lista de `tags`:')
+        env = self.env.registry
+        self.output.head(env.host, env.namespace, tmpl='[REGISTRY]: {}/{}:',
+                         title=False)
         for x in self._list(kwargs['image'], kwargs['--filter-tags']):
             self.output.bullet(x.repository, x.tag, tmpl='{}:{}')
             if verbose or manifest:

@@ -268,7 +268,8 @@ class Printer:
 
     def title(self, *message, **kwargs):
         kwargs['icon'] = '~'
-        self.bullet(*message, title=True, **kwargs)
+        kwargs.setdefault('title', True)
+        self.bullet(*message, **kwargs)
 
     def head(self, *message, **kwargs):
         self.blank()

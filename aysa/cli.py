@@ -39,7 +39,7 @@ class TopLevelCommand(Command):
     Comandos disponibles:
         config      Lista y administra los valores de la configuración del entorno de trabajo
                     definido por el archivo `~/.aysa/config.ini`
-        image       Lista las `imágenes` y administra los `tags` del `repositorio`.
+        registry    Lista las `imágenes` y administra los `tags` del `repositorio`.
         release     Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
         remote      Despliega las `imágenes` en los entornos de `DESARROLLO` y `QA/TESTING`.
 
@@ -51,7 +51,7 @@ class TopLevelCommand(Command):
     # Hacerlo dinámico !!!! ;)
     commands = {
         'config': ConfigCommand,
-        'image': ImageCommand,
+        'registry': ImageCommand,
         'release': ReleaseCommand,
         'remote': RemoteCommand,
     }

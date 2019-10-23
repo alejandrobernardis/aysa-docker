@@ -77,8 +77,9 @@ class _ConnectionCommand(Command):
         for x in environs or (DEVELOPMENT,):
             if cnx is True:
                 self.s_connection(x)
-            self.output.title(x)
             stage = self.env[self._stage]
+            self.output.head(x.upper(), stage.user, stage.host,
+                              tmpl='[{}]: {}@{}', title=False)
             with self.cnx.cd('' if stage.user == '0x00' else stage.path):
                 yield x
             self.output.blank()
@@ -88,6 +89,11 @@ class _ConnectionCommand(Command):
             if values and x not in values:
                 continue
             yield x
+
+    def _services(self, values):
+        if isinstance(values, dict):
+            values = values['service']
+        return [x for x in self._list_service(values)]
 
 
 class RemoteCommand(_ConnectionCommand):
@@ -100,6 +106,7 @@ class RemoteCommand(_ConnectionCommand):
         down    Detiene y elimina los servicios en uno o más entornos.
         ls      Lista los servicios disponibles.
         prune   Purga los servicios en uno o más entornos.
+        ps      ----
         restart Detiene y elimina los servicios en uno o más entornos.
         start   Inicia los servicios en uno o más entornos.
         stop    Detiene los servicios en uno o más entornos.
@@ -107,11 +114,10 @@ class RemoteCommand(_ConnectionCommand):
     """
     def _deploy(self, **kwargs):
         # 1. detener los servicios
-        #self.run('docker-compose stop')
+        self.run('docker-compose stop')
 
         # 2. buscar los servicios
-        services = [x for x in self._list_service(kwargs['service'])]
-        print(services)
+        services = self._services(kwargs)
 
         # 3. buscar los contenedore e imágenes
         images = []
@@ -126,7 +132,7 @@ class RemoteCommand(_ConnectionCommand):
         try:
             if services:
                 srv = self._list_to_str(set(services))
-                #self.run('docker-compose rm -fsv {}'.format(srv))
+                self.run('docker-compose rm -fsv {}'.format(srv))
         except:
             pass
 
@@ -134,15 +140,15 @@ class RemoteCommand(_ConnectionCommand):
         try:
             if images:
                 srv = self._list_to_str(set(images))
-                #self.run('docker rmi -f {}'.format(srv))
+                self.run('docker rmi -f {}'.format(srv))
         except:
             pass
 
         # 6. purgamos los volumenes
-        #self.run('docker volume prune -f')
+        self.run('docker volume prune -f')
 
         # 7. deplegar
-        #self.run('docker-compose up -d --remove-orphans')
+        self.run('docker-compose up -d --remove-orphans')
 
     def up(self, **kwargs):
         """
@@ -188,7 +194,8 @@ class RemoteCommand(_ConnectionCommand):
         """
         if self.yes(**kwargs):
             for _ in self._list_environ(kwargs):
-                pass
+                services = self._list_to_str(self._services(kwargs))
+                self.run('docker-compose start {}'.format(services))
 
     def stop(self, **kwargs):
         """
@@ -203,7 +210,8 @@ class RemoteCommand(_ConnectionCommand):
         """
         if self.yes(**kwargs):
             for _ in self._list_environ(kwargs):
-                pass
+                services = self._list_to_str(self._services(kwargs))
+                self.run('docker-compose stop {}'.format(services))
 
     def prune(self, **kwargs):
         """
@@ -232,7 +240,7 @@ class RemoteCommand(_ConnectionCommand):
             -q, --quality           Entorno de `QA/TESTING`
         """
         for _ in self._list_environ(kwargs):
-            for line in self._list("docker-compose ps --services", rx_service):
+            for line in self._list_service():
                 self.output.bullet(line, tab=1)
 
     def ps(self, **kwargs):
