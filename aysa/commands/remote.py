@@ -55,13 +55,6 @@ class _ConnectionCommand(Command):
     def run(self, command, hide=False, **kwargs):
         return self.cnx.run(command, hide=hide, **kwargs)
 
-    def _list(self, cmd, filter_line=None, obj=None):
-        response = self.run(cmd, hide=True)
-        for line in response.stdout.splitlines():
-            if filter_line and not filter_line.match(line):
-                continue
-            yield obj(line) if obj is not None else line
-
     @lru_cache()
     def _get_service(self, value, sep='_'):
         return sep.join(value.split(sep)[1:-1])
@@ -70,27 +63,36 @@ class _ConnectionCommand(Command):
         return sep.join((x for x in values))
 
     def _get_environ(self, values, cnx=True):
-        for x in self._stages:
-            if not values.get('--' + x, False):
-                continue
+        environs = [x for x in self._stages if values.get('--' + x, False)]
+        for x in environs or (DEVELOPMENT,):
             if cnx is True:
                 self.s_connection(x)
             self.output.title(x)
             yield x
             self.output.blank()
 
+    def _list(self, cmd, filter_line=None, obj=None):
+        response = self.run(cmd, hide=True)
+        for line in response.stdout.splitlines():
+            if filter_line and not filter_line.match(line):
+                continue
+            yield obj(line) if obj is not None else line
 
-class DeployCommand(_ConnectionCommand):
+
+class RemoteCommand(_ConnectionCommand):
     """
     Despliega las `imágenes` en los entornos de `DESARROLLO` y `QA/TESTING`.
 
-    Usage: deploy COMMAND [ARGS...]
+    Usage: remote COMMAND [ARGS...]
 
     Comandos disponibles:
-        ls      Lista los servicios disponibles.
-        up      Crea e inicia los servicios en uno o más entornos.
         down    Detiene y elimina los servicios en uno o más entornos.
+        ls      Lista los servicios disponibles.
         prune   Purga los servicios en uno o más entornos.
+        restart Detiene y elimina los servicios en uno o más entornos.
+        start   Detiene y elimina los servicios en uno o más entornos.
+        stop    Detiene y elimina los servicios en uno o más entornos.
+        up      Crea e inicia los servicios en uno o más entornos.
     """
     def _deploy(self, stage, **kwargs):
         # establecemos la conexión
@@ -116,15 +118,17 @@ class DeployCommand(_ConnectionCommand):
 
         # # 4. eliminar los servicios
         try:
-            srv = self._get_strlist(services)
-            self.run('yes | docker-compose rm {}'.format(srv))
+            if services:
+                srv = self._get_strlist(services)
+                self.run('yes | docker-compose rm {}'.format(srv))
         except:
             pass
 
         # # 5. eliminar las imágenes
         try:
-            srv = self._get_strlist(images)
-            self.run('yes | docker rmi -f {}'.format(srv))
+            if images:
+                srv = self._get_strlist(images)
+                self.run('yes | docker rmi -f {}'.format(srv))
         except:
             pass
 
@@ -142,7 +146,7 @@ class DeployCommand(_ConnectionCommand):
             -q, --quality           Entorno de `QA/TESTING`
             -y, --yes               Responde "SI" a todas las preguntas.
         """
-        if self.yes(kwargs):
+        if self.yes(**kwargs):
             for _ in self._get_environ(kwargs):
                 self._deploy(None, **kwargs)
 
@@ -150,14 +154,14 @@ class DeployCommand(_ConnectionCommand):
         """
         Crea e inicia los servicios en uno o más entornos.
 
-        Usage: down [options] [SERVICE...]
+        Usage: down [options]
 
         Opciones
             -d, --development       Entorno de `DESARROLLO`
             -q, --quality           Entorno de `QA/TESTING`
             -y, --yes               Responde "SI" a todas las preguntas.
         """
-        if self.yes(kwargs):
+        if self.yes(**kwargs):
             for _ in self._get_environ(kwargs):
                 self.run('docker-compose down')
 
@@ -165,19 +169,23 @@ class DeployCommand(_ConnectionCommand):
         """
         Purga los servicios en uno o más entornos.
 
-        Usage: prune [options] [SERVICE...]
+        Usage: prune [options] (--development|--quality)
 
         Opciones
-            -y, --yes    Responde "SI" a todas las preguntas.
+            -y, --yes               Responde "SI" a todas las preguntas.
+            -d, --development       Entorno de `DESARROLLO`
+            -q, --quality           Entorno de `QA/TESTING`
         """
-        if self.yes(kwargs):
+        if self.yes(**kwargs):
             for _ in self._get_environ(kwargs):
-                self.down(**kwargs)
+                self.run('docker-compose stop')
                 images = (
                     '{}:{}'.format(*line.split()[1:3])
                     for line in self._list("docker-compose images", rx_item)
                 )
-                self.run('docker rmi -f {}'.format(' '.join(images)))
+                if images:
+                    self.run('docker rmi -f {}'.format(' '.join(images)))
+                self.run('docker-compose rm -fsv')
 
     def ls(self, **kwargs):
         """

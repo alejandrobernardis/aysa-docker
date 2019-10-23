@@ -8,8 +8,8 @@ import logging
 from aysa import __version__
 from aysa.commands import Command
 from aysa.commands.config import ConfigCommand
-from aysa.commands.deploy import DeployCommand
 from aysa.commands.registry import ImageCommand, ReleaseCommand
+from aysa.commands.remote import RemoteCommand
 
 
 # logger
@@ -39,9 +39,9 @@ class TopLevelCommand(Command):
     Comandos disponibles:
         config      Lista y administra los valores de la configuración del entorno de trabajo
                     definido por el archivo `~/.aysa/config.ini`
-        deploy      Despliega las `imágenes` en los entornos de `DESARROLLO` y `QA/TESTING`.
         image       Lista las `imágenes` y administra los `tags` del `repositorio`.
         release     Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
+        remote      Despliega las `imágenes` en los entornos de `DESARROLLO` y `QA/TESTING`.
 
     > Utilice `aysa COMMAND (-h|--help)` para ver la `ayuda` especifica del comando.
     """
@@ -51,9 +51,9 @@ class TopLevelCommand(Command):
     # Hacerlo dinámico !!!! ;)
     commands = {
         'config': ConfigCommand,
-        'deploy': DeployCommand,
         'image': ImageCommand,
-        'release': ReleaseCommand
+        'release': ReleaseCommand,
+        'remote': RemoteCommand,
     }
 
 

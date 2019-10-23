@@ -113,7 +113,7 @@ class ImageCommand(_RegistryCommand):
         Opciones:
             -y, --yes    Responde "SI" a todas las preguntas.
         """
-        if self.yes(kwargs):
+        if self.yes(**kwargs):
             for x in kwargs['image_tag']:
                 src = Image(self._fix_image_name(x))
                 try:
@@ -133,7 +133,7 @@ class ReleaseCommand(_RegistryCommand):
         production    Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
     """
     def _release(self, source_tag, target_tag, **kwargs):
-        if self.yes(kwargs):
+        if self.yes(**kwargs):
             for x in self._list(kwargs['image'], source_tag):
                 t = Image('{}:{}'.format(x.repository, target_tag))
                 try:

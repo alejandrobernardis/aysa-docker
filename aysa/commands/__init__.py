@@ -190,7 +190,7 @@ class Command:
                 raise SystemExit('El valor ingresado no es correcto: ' + value)
         return value
 
-    def yes(self, message=None, kwargs=None):
+    def yes(self, message=None, **kwargs):
         if kwargs and kwargs.get('--yes', False) is False:
             if message is None:
                 message = 'Desea continuar?'
