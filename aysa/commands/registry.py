@@ -5,7 +5,7 @@
 
 from aysa import WILDCARD
 from aysa.commands import Command
-from aysa.docker.registry import Api, Image
+from aysa.registry import Api, Image
 
 
 class _RegistryCommand(Command):
