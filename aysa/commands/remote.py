@@ -79,7 +79,7 @@ class _ConnectionCommand(Command):
                 self.s_connection(x)
             stage = self.env[self._stage]
             self.output.head(x.upper(), stage.user, stage.host,
-                              tmpl='[{}]: {}@{}', title=False)
+                             tmpl='[{}]: {}@{}', title=False)
             with self.cnx.cd('' if stage.user == '0x00' else stage.path):
                 yield x
             self.output.blank()
@@ -95,23 +95,6 @@ class _ConnectionCommand(Command):
             values = values['service']
         return [x for x in self._list_service(values)]
 
-
-class RemoteCommand(_ConnectionCommand):
-    """
-    Despliega las `imágenes` en los entornos de `DESARROLLO` y `QA/TESTING`.
-
-    Usage: remote COMMAND [ARGS...]
-
-    Comandos disponibles:
-        down    Detiene y elimina los servicios en uno o más entornos.
-        ls      Lista los servicios disponibles.
-        prune   Purga los servicios en uno o más entornos.
-        ps      ----
-        restart Detiene y elimina los servicios en uno o más entornos.
-        start   Inicia los servicios en uno o más entornos.
-        stop    Detiene los servicios en uno o más entornos.
-        up      Crea e inicia los servicios en uno o más entornos.
-    """
     def _deploy(self, **kwargs):
         # 1. detener los servicios
         self.run('docker-compose stop')
@@ -150,6 +133,23 @@ class RemoteCommand(_ConnectionCommand):
         # 7. deplegar
         self.run('docker-compose up -d --remove-orphans')
 
+
+class RemoteCommand(_ConnectionCommand):
+    """
+    Despliega las `imágenes` en los entornos de `DESARROLLO` y `QA/TESTING`.
+
+    Usage: remote COMMAND [ARGS...]
+
+    Comandos disponibles:
+        down    Detiene y elimina los servicios en uno o más entornos.
+        ls      Lista los servicios disponibles.
+        prune   Purga los servicios en uno o más entornos.
+        ps      ----
+        restart Detiene y elimina los servicios en uno o más entornos.
+        start   Inicia los servicios en uno o más entornos.
+        stop    Detiene los servicios en uno o más entornos.
+        up      Crea e inicia los servicios en uno o más entornos.
+    """
     def up(self, **kwargs):
         """
         Crea e inicia los servicios en uno o más entornos.
@@ -212,6 +212,22 @@ class RemoteCommand(_ConnectionCommand):
             for _ in self._list_environ(kwargs):
                 services = self._list_to_str(self._services(kwargs))
                 self.run('docker-compose stop {}'.format(services))
+
+    def restart(self, **kwargs):
+        """
+        Detiene los servicios en uno o más entornos.
+
+        Usage: restart [options] [SERVICE...]
+
+        Opciones
+            -d, --development       Entorno de `DESARROLLO`
+            -q, --quality           Entorno de `QA/TESTING`
+            -y, --yes               Responde "SI" a todas las preguntas.
+        """
+        if self.yes(**kwargs):
+            for _ in self._list_environ(kwargs):
+                services = self._list_to_str(self._services(kwargs))
+                self.run('docker-compose restart {}'.format(services))
 
     def prune(self, **kwargs):
         """

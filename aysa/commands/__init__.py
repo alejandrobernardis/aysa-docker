@@ -259,30 +259,15 @@ class Printer:
     def done(self):
         self.flush('Done.', endx=3)
 
-    def error(self):
-        self.flush('Error.', endx=3)
-
     def error(self, *message, **kwargs):
         kwargs['icon'] = '!'
         self.bullet(*message, **kwargs)
 
     def title(self, *message, **kwargs):
         kwargs['icon'] = '~'
-        kwargs.setdefault('title', True)
+        if 'tmpl' in kwargs:
+            kwargs['title'] = False
         self.bullet(*message, **kwargs)
-
-    def head(self, *message, **kwargs):
-        self.blank()
-        self.title(*message, **kwargs)
-        self.rule()
-
-    def foot(self):
-        self.blank()
-        self.rule()
-        self.done()
-
-    def rule(self, icon='-', maxsize=2):
-        self.flush(icon * min(80, max(0, maxsize)))
 
     def question(self, *message, **kwargs):
         kwargs['icon'] = '?'
@@ -293,8 +278,21 @@ class Printer:
             kwargs['tmpl'] = '{} ' + kwargs['tmpl']
         self.write(icon, *message, **kwargs)
 
+    def rule(self, icon='-', maxsize=2):
+        self.flush(icon * min(80, max(0, maxsize)))
+
     def blank(self):
         self.flush('')
+
+    def head(self, *message, **kwargs):
+        self.blank()
+        self.title(*message, **kwargs)
+        self.rule()
+
+    def foot(self):
+        self.blank()
+        self.rule()
+        self.done()
 
     def write(self, *values, **kwargs):
         value = self._parse(*values, **kwargs)
