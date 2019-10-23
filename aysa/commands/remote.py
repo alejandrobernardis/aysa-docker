@@ -3,6 +3,9 @@
 # Created: 2019/10/21
 # ~
 
+# TODO i0608156: implementar un esquema de paralelismo para la ejecución de los
+#                entornos. https://docs.fabfile.org/en/1.11/usage/parallel.html
+
 import re
 from pathlib import Path
 from functools import lru_cache
@@ -32,7 +35,7 @@ class _ConnectionCommand(Command):
         if self._stage and stage != self._stage:
             self.s_close()
         if self._connection_cache is None:
-            env = self.env[stage]
+            env = self.env_copy[stage]
             env.pop('path', None)
             if env['user'].lower() == 'root':
                 raise SystemExit('El usuario "root" no está permitido para '
@@ -56,20 +59,11 @@ class _ConnectionCommand(Command):
         return self.cnx.run(command, hide=hide, **kwargs)
 
     @lru_cache()
-    def _get_service(self, value, sep='_'):
+    def _norm_service(self, value, sep='_'):
         return sep.join(value.split(sep)[1:-1])
 
-    def _get_strlist(self, values, sep=' '):
+    def _list_to_str(self, values, sep=' '):
         return sep.join((x for x in values))
-
-    def _get_environ(self, values, cnx=True):
-        environs = [x for x in self._stages if values.get('--' + x, False)]
-        for x in environs or (DEVELOPMENT,):
-            if cnx is True:
-                self.s_connection(x)
-            self.output.title(x)
-            yield x
-            self.output.blank()
 
     def _list(self, cmd, filter_line=None, obj=None):
         response = self.run(cmd, hide=True)
@@ -77,6 +71,23 @@ class _ConnectionCommand(Command):
             if filter_line and not filter_line.match(line):
                 continue
             yield obj(line) if obj is not None else line
+
+    def _list_environ(self, values, cnx=True):
+        environs = [x for x in self._stages if values.get('--' + x, False)]
+        for x in environs or (DEVELOPMENT,):
+            if cnx is True:
+                self.s_connection(x)
+            self.output.title(x)
+            stage = self.env[self._stage]
+            with self.cnx.cd('' if stage.user == '0x00' else stage.path):
+                yield x
+            self.output.blank()
+
+    def _list_service(self, values=None, **kwargs):
+        for x in self._list("docker-compose ps --services", rx_service):
+            if values and x not in values:
+                continue
+            yield x
 
 
 class RemoteCommand(_ConnectionCommand):
@@ -90,50 +101,48 @@ class RemoteCommand(_ConnectionCommand):
         ls      Lista los servicios disponibles.
         prune   Purga los servicios en uno o más entornos.
         restart Detiene y elimina los servicios en uno o más entornos.
-        start   Detiene y elimina los servicios en uno o más entornos.
-        stop    Detiene y elimina los servicios en uno o más entornos.
+        start   Inicia los servicios en uno o más entornos.
+        stop    Detiene los servicios en uno o más entornos.
         up      Crea e inicia los servicios en uno o más entornos.
     """
-    def _deploy(self, stage, **kwargs):
-        # establecemos la conexión
-        if stage is not None:
-            self._connection(stage)
-
+    def _deploy(self, **kwargs):
         # 1. detener los servicios
-        self.run('docker-compose stop')
+        #self.run('docker-compose stop')
 
         # 2. buscar los servicios
-        cmd = "docker-compose ps --services"
-        services = [x for x in self._list(cmd, rx_service)
-                       if x in kwargs['service']]
+        services = [x for x in self._list_service(kwargs['service'])]
+        print(services)
 
         # 3. buscar los contenedore e imágenes
         images = []
 
         for line in self._list("docker-compose images", rx_item):
             container, image, tag = line.split()[:3]
-            if services and self._get_service(container) not in services:
+            if services and self._norm_service(container) not in services:
                 continue
             images.append('{}:{}'.format(image, tag))
 
-        # # 4. eliminar los servicios
+        # 4. eliminar los servicios
         try:
             if services:
-                srv = self._get_strlist(services)
-                self.run('yes | docker-compose rm {}'.format(srv))
+                srv = self._list_to_str(set(services))
+                #self.run('docker-compose rm -fsv {}'.format(srv))
         except:
             pass
 
-        # # 5. eliminar las imágenes
+        # 5. eliminar las imágenes
         try:
             if images:
-                srv = self._get_strlist(images)
-                self.run('yes | docker rmi -f {}'.format(srv))
+                srv = self._list_to_str(set(images))
+                #self.run('docker rmi -f {}'.format(srv))
         except:
             pass
 
-        # 6. deplegar
-        self.run('docker-compose up -d')
+        # 6. purgamos los volumenes
+        #self.run('docker volume prune -f')
+
+        # 7. deplegar
+        #self.run('docker-compose up -d --remove-orphans')
 
     def up(self, **kwargs):
         """
@@ -147,8 +156,9 @@ class RemoteCommand(_ConnectionCommand):
             -y, --yes               Responde "SI" a todas las preguntas.
         """
         if self.yes(**kwargs):
-            for _ in self._get_environ(kwargs):
-                self._deploy(None, **kwargs)
+            for _ in self._list_environ(kwargs):
+                self._deploy(**kwargs)
+
 
     def down(self, **kwargs):
         """
@@ -162,30 +172,54 @@ class RemoteCommand(_ConnectionCommand):
             -y, --yes               Responde "SI" a todas las preguntas.
         """
         if self.yes(**kwargs):
-            for _ in self._get_environ(kwargs):
-                self.run('docker-compose down')
+            for _ in self._list_environ(kwargs):
+                self.run('docker-compose down -v --remove-orphans')
+
+    def start(self, **kwargs):
+        """
+        Inicia los servicios en uno o más entornos.
+
+        Usage: start [options] [SERVICE...]
+
+        Opciones
+            -d, --development       Entorno de `DESARROLLO`
+            -q, --quality           Entorno de `QA/TESTING`
+            -y, --yes               Responde "SI" a todas las preguntas.
+        """
+        if self.yes(**kwargs):
+            for _ in self._list_environ(kwargs):
+                pass
+
+    def stop(self, **kwargs):
+        """
+        Detiene los servicios en uno o más entornos.
+
+        Usage: stop [options] [SERVICE...]
+
+        Opciones
+            -d, --development       Entorno de `DESARROLLO`
+            -q, --quality           Entorno de `QA/TESTING`
+            -y, --yes               Responde "SI" a todas las preguntas.
+        """
+        if self.yes(**kwargs):
+            for _ in self._list_environ(kwargs):
+                pass
 
     def prune(self, **kwargs):
         """
         Purga los servicios en uno o más entornos.
 
-        Usage: prune [options] (--development|--quality)
+        Usage: prune [--yes] (--development|--quality)
 
         Opciones
-            -y, --yes               Responde "SI" a todas las preguntas.
             -d, --development       Entorno de `DESARROLLO`
             -q, --quality           Entorno de `QA/TESTING`
+            -y, --yes               Responde "SI" a todas las preguntas.
         """
         if self.yes(**kwargs):
-            for _ in self._get_environ(kwargs):
-                self.run('docker-compose stop')
-                images = (
-                    '{}:{}'.format(*line.split()[1:3])
-                    for line in self._list("docker-compose images", rx_item)
-                )
-                if images:
-                    self.run('docker rmi -f {}'.format(' '.join(images)))
-                self.run('docker-compose rm -fsv')
+            for _ in self._list_environ(kwargs):
+                self.run('docker-compose down -v --rmi all --remove-orphans')
+                self.run('docker volume prune -f')
 
     def ls(self, **kwargs):
         """
@@ -197,7 +231,7 @@ class RemoteCommand(_ConnectionCommand):
             -d, --development       Entorno de `DESARROLLO`
             -q, --quality           Entorno de `QA/TESTING`
         """
-        for _ in self._get_environ(kwargs):
+        for _ in self._list_environ(kwargs):
             for line in self._list("docker-compose ps --services", rx_service):
                 self.output.bullet(line, tab=1)
 
@@ -211,5 +245,5 @@ class RemoteCommand(_ConnectionCommand):
             -d, --development       Entorno de `DESARROLLO`
             -q, --quality           Entorno de `QA/TESTING`
         """
-        for _ in self._get_environ(kwargs):
+        for _ in self._list_environ(kwargs):
             self.run("docker-compose ps")

@@ -5,6 +5,7 @@
 
 import sys
 import json
+from copy import deepcopy
 from pathlib import Path
 from docopt import docopt, DocoptExit
 from inspect import getdoc, isclass
@@ -100,6 +101,11 @@ class Command:
     @property
     def env(self):
         return self.top_level._env
+
+    @property
+    def env_copy(self):
+        return deepcopy(self.env)
+
 
     @env.setter
     def env(self, value):
