@@ -113,12 +113,12 @@ class ImageCommand(_RegistryCommand):
         Opciones:
             -y, --yes    Responde "SI" a todas las preguntas.
         """
-        if kwargs['--yes'] is True or self.yes():
+        if self.yes(kwargs):
             for x in kwargs['image_tag']:
                 src = Image(self._fix_image_name(x))
                 try:
                     self.api.delete_tag(src.repository, src.tag)
-                except Exception as e:
+                except:
                     pass
 
 
@@ -129,36 +129,36 @@ class ReleaseCommand(_RegistryCommand):
     Usage: release COMMAND [ARGS...]
 
     Comandos disponibles:
-        test    Crea las `imágenes` para el entorno de `QA/TESTING`.
-        prod    Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
+        quality       Crea las `imágenes` para el entorno de `QA/TESTING`.
+        production    Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
     """
     def _release(self, source_tag, target_tag, **kwargs):
-        if kwargs['--yes'] is True or self.yes():
+        if self.yes(kwargs):
             for x in self._list(kwargs['image'], source_tag):
                 t = Image('{}:{}'.format(x.repository, target_tag))
                 try:
-                    roolback = '{}-rollback'.format(t.tag)
+                    rollback = '{}-rollback'.format(t.tag)
                     self.api.put_tag(t.repository, t.tag, rollback)
-                except Exception as e:
+                except:
                     pass
                 self.api.put_tag(x.repository, x.tag, t.tag)
 
-    def test(self, **kwargs):
+    def quality(self, **kwargs):
         """
         Crea las `imágenes` para el entorno de `QA/TESTING`.
 
-        Usage: test [options] [IMAGE...]
+        Usage: quality [options] [IMAGE...]
 
         Opciones:
             -y, --yes    Responde "SI" a todas las preguntas.
         """
         self._release('dev', 'rc', **kwargs)
 
-    def prod(self, **kwargs):
+    def production(self, **kwargs):
         """
         Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
 
-        Usage: prod [options] [IMAGE...]
+        Usage: production [options] [IMAGE...]
 
         Opciones:
             -y, --yes    Responde "SI" a todas las preguntas.

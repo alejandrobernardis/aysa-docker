@@ -190,10 +190,12 @@ class Command:
                 raise SystemExit('El valor ingresado no es correcto: ' + value)
         return value
 
-    def yes(self, message=None):
-        if message is None:
-            message = 'Desea continuar?'
-        return is_yes(self.input(message, default='N', values='N/y'))
+    def yes(self, message=None, kwargs=None):
+        if kwargs and kwargs.get('--yes', False) is False:
+            if message is None:
+                message = 'Desea continuar?'
+            return is_yes(self.input(message, default='N', values='N/y'))
+        return True
 
     def env_load(self):
         env, _ = env_helper(self.env_file)

@@ -69,9 +69,6 @@ class _ConnectionCommand(Command):
     def _get_strlist(self, values, sep=' '):
         return sep.join((x for x in values))
 
-    # def _get_environ(self, values):
-    #     return (x for x in self._stages if values.get('--' + x, False))
-
     def _get_environ(self, values, cnx=True):
         for x in self._stages:
             if not values.get('--' + x, False):
@@ -100,10 +97,6 @@ class DeployCommand(_ConnectionCommand):
         if stage is not None:
             self._connection(stage)
 
-        # servicios a purgar
-        images = []
-        services = []
-
         # 1. detener los servicios
         self.run('docker-compose stop')
 
@@ -113,9 +106,9 @@ class DeployCommand(_ConnectionCommand):
                        if x in kwargs['service']]
 
         # 3. buscar los contenedore e imágenes
-        cmd = "docker-compose images "
+        images = []
 
-        for line in self._list(cmd, rx_item):
+        for line in self._list("docker-compose images", rx_item):
             container, image, tag = line.split()[:3]
             if services and self._get_service(container) not in services:
                 continue
@@ -125,7 +118,7 @@ class DeployCommand(_ConnectionCommand):
         try:
             srv = self._get_strlist(services)
             self.run('yes | docker-compose rm {}'.format(srv))
-        except Exception as e:
+        except:
             pass
 
         # # 5. eliminar las imágenes
@@ -147,9 +140,11 @@ class DeployCommand(_ConnectionCommand):
         Opciones
             -d, --development       Entorno de `DESARROLLO`
             -q, --quality           Entorno de `QA/TESTING`
+            -y, --yes               Responde "SI" a todas las preguntas.
         """
-        for x in self._get_environ(kwargs):
-            self._deploy(None, **kwargs)
+        if self.yes(kwargs):
+            for _ in self._get_environ(kwargs):
+                self._deploy(None, **kwargs)
 
     def down(self, **kwargs):
         """
@@ -160,9 +155,11 @@ class DeployCommand(_ConnectionCommand):
         Opciones
             -d, --development       Entorno de `DESARROLLO`
             -q, --quality           Entorno de `QA/TESTING`
+            -y, --yes               Responde "SI" a todas las preguntas.
         """
-        for x in self._get_environ(kwargs):
-            self.run('docker-compose down')
+        if self.yes(kwargs):
+            for _ in self._get_environ(kwargs):
+                self.run('docker-compose down')
 
     def prune(self, **kwargs):
         """
@@ -171,13 +168,16 @@ class DeployCommand(_ConnectionCommand):
         Usage: prune [options] [SERVICE...]
 
         Opciones
-            -d, --development       Entorno de `DESARROLLO`
-            -q, --quality           Entorno de `QA/TESTING`
+            -y, --yes    Responde "SI" a todas las preguntas.
         """
-        for x in self._get_environ(kwargs):
-            self.down(**kwargs)
-            # self.run('docker rmi -f $(docker images -q)')
-
+        if self.yes(kwargs):
+            for _ in self._get_environ(kwargs):
+                self.down(**kwargs)
+                images = (
+                    '{}:{}'.format(*line.split()[1:3])
+                    for line in self._list("docker-compose images", rx_item)
+                )
+                self.run('docker rmi -f {}'.format(' '.join(images)))
 
     def ls(self, **kwargs):
         """
@@ -189,7 +189,7 @@ class DeployCommand(_ConnectionCommand):
             -d, --development       Entorno de `DESARROLLO`
             -q, --quality           Entorno de `QA/TESTING`
         """
-        for x in self._get_environ(kwargs):
+        for _ in self._get_environ(kwargs):
             for line in self._list("docker-compose ps --services", rx_service):
                 self.output.bullet(line, tab=1)
 
@@ -203,5 +203,5 @@ class DeployCommand(_ConnectionCommand):
             -d, --development       Entorno de `DESARROLLO`
             -q, --quality           Entorno de `QA/TESTING`
         """
-        for x in self._get_environ(kwargs):
+        for _ in self._get_environ(kwargs):
             self.run("docker-compose ps")
