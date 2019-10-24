@@ -95,42 +95,26 @@ class _ConnectionCommand(Command):
             values = values['service']
         return [x for x in self._list_service(values)]
 
-    def _deploy(self, **kwargs):
-        # 1. detener los servicios
-        self.run('docker-compose stop')
-
-        # 2. buscar los servicios
-        services = self._services(kwargs)
-
-        # 3. buscar los contenedore e imágenes
+    def _images(self, values):
         images = []
-
         for line in self._list("docker-compose images", rx_item):
             container, image, tag = line.split()[:3]
-            if services and self._norm_service(container) not in services:
+            if values and self._norm_service(container) not in values:
                 continue
             images.append('{}:{}'.format(image, tag))
+        return images
 
-        # 4. eliminar los servicios
-        try:
-            if services:
-                srv = self._list_to_str(set(services))
-                self.run('docker-compose rm -fsv {}'.format(srv))
-        except:
-            pass
-
-        # 5. eliminar las imágenes
-        try:
-            if images:
-                srv = self._list_to_str(set(images))
-                self.run('docker rmi -f {}'.format(srv))
-        except:
-            pass
-
-        # 6. purgamos los volumenes
+    def _deploy(self, **kwargs):
+        self.run('docker-compose stop')
+        services = self._services(kwargs)
+        if services:
+            srv = self._list_to_str(set(services))
+            self.run('docker-compose rm -fsv {}'.format(srv))
+        images = self._images(services)
+        if images:
+            srv = self._list_to_str(set(images))
+            self.run('docker rmi -f {}'.format(srv))
         self.run('docker volume prune -f')
-
-        # 7. deplegar
         self.run('docker-compose up -d --remove-orphans')
 
 
@@ -164,7 +148,6 @@ class RemoteCommand(_ConnectionCommand):
         if self.yes(**kwargs):
             for _ in self._list_environ(kwargs):
                 self._deploy(**kwargs)
-
 
     def down(self, **kwargs):
         """
@@ -229,22 +212,6 @@ class RemoteCommand(_ConnectionCommand):
                 services = self._list_to_str(self._services(kwargs))
                 self.run('docker-compose restart {}'.format(services))
 
-    def prune(self, **kwargs):
-        """
-        Purga los servicios en uno o más entornos.
-
-        Usage: prune [--yes] (--development|--quality)
-
-        Opciones
-            -d, --development       Entorno de `DESARROLLO`
-            -q, --quality           Entorno de `QA/TESTING`
-            -y, --yes               Responde "SI" a todas las preguntas.
-        """
-        if self.yes(**kwargs):
-            for _ in self._list_environ(kwargs):
-                self.run('docker-compose down -v --rmi all --remove-orphans')
-                self.run('docker volume prune -f')
-
     def ls(self, **kwargs):
         """
         Lista los servicios disponibles.
@@ -271,3 +238,39 @@ class RemoteCommand(_ConnectionCommand):
         """
         for _ in self._list_environ(kwargs):
             self.run("docker-compose ps")
+
+    def prune(self, **kwargs):
+        """
+        Purga los servicios en uno o más entornos.
+
+        Usage: prune [--yes] (--development|--quality)
+
+        Opciones
+            -d, --development       Entorno de `DESARROLLO`
+            -q, --quality           Entorno de `QA/TESTING`
+            -y, --yes               Responde "SI" a todas las preguntas.
+        """
+        message = '''
+[PRECAUCIÓN]
+
+  Se procederá a "PURGAR" el o los `entornos`, 
+  el siguiente proceso es "IRRÉVERSIBLE".
+
+--
+> Desdea continuar?'''
+        if self.yes(message, **kwargs):
+            for _ in self._list_environ(kwargs):
+                self.run('docker-compose down -v --rmi all --remove-orphans')
+                self.run('docker volume prune -f')
+
+    # FIXME 0608156 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    # def rm(self, **kwargs):      >> elimina uno o más servicios.
+    # def rmi(self, **kwargs):     >> elimina una o más iméagenes.
+    # def config(self, **kwargs):  >> imprime la configuración de los servicios.
+    # def top(self, **kwargs):     >> muestra los procesos activos.
+    # def pull(self, **kwargs):    >> descarga las imágenes asociadas a los
+    #                                 servicios.
+    # def logs(self, **kwargs):    >> muestra la salida de los logs.
+    # def cmd(self, **kwargs):     >> ejecuta un comando docker / docker-compose
+    #                                 de forma remota.
+    # FIXME 0608156 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
