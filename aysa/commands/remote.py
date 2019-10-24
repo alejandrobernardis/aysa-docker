@@ -18,7 +18,7 @@ rx_item = re.compile(r'^[a-z](?:[\w_])+_\d{1,3}\s{2,}[a-z0-9](?:[\w.-]+)'
                      r'(?::\d{1,5})?/[a-z0-9](?:[\w.-/])*\s{2,}'
                      r'(?:[a-z][\w.-]*)\s', re.I)
 rx_service = re.compile(r'^[a-z](?:[\w_])+$', re.I)
-
+rx_login = re.compile(r'Login\sSucceeded$', re.I)
 
 class _ConnectionCommand(Command):
     _stage = None
@@ -90,32 +90,48 @@ class _ConnectionCommand(Command):
                 continue
             yield x
 
+    def _list_image(self, values, **kwargs):
+        for line in self._list("docker-compose images", rx_item):
+            container, image, tag = line.split()[:3]
+            if values and self._norm_service(container) not in values:
+                continue
+            yield '{}:{}'.format(image, tag)
+
     def _services(self, values):
         if isinstance(values, dict):
             values = values['service']
         return [x for x in self._list_service(values)]
 
     def _images(self, values):
-        images = []
-        for line in self._list("docker-compose images", rx_item):
-            container, image, tag = line.split()[:3]
-            if values and self._norm_service(container) not in values:
-                continue
-            images.append('{}:{}'.format(image, tag))
-        return images
+        if isinstance(values, dict):
+            values = values['image']
+        return [x for x in self._list_image(values)]
+
+    def _login(self):
+        try:
+            env = self.env.registry
+            cmd = 'docker login -u {} -p {} {}' \
+                  .format(*env.credentials.split(':'), env.host)
+            return rx_login.match(self.run(cmd, hide=True).stdout) is not None
+        except:
+            return False
 
     def _deploy(self, **kwargs):
-        self.run('docker-compose stop')
-        services = self._services(kwargs)
-        if services:
-            srv = self._list_to_str(set(services))
-            self.run('docker-compose rm -fsv {}'.format(srv))
-        images = self._images(services)
-        if images:
-            srv = self._list_to_str(set(images))
-            self.run('docker rmi -f {}'.format(srv))
-        self.run('docker volume prune -f')
-        self.run('docker-compose up -d --remove-orphans')
+        if self._login():
+            self.run('docker-compose stop')
+            services = self._services(kwargs)
+            images = self._images(services)
+            if services:
+                srv = self._list_to_str(set(services))
+                self.run('docker-compose rm -fsv {}'.format(srv))
+            if images:
+                srv = self._list_to_str(set(images))
+                self.run('docker rmi -f {}'.format(srv))
+            self.run('docker volume prune -f')
+            self.run('docker-compose up -d --remove-orphans')
+
+    def _run_cmd(self, cmd, values):
+        self.run('{} {}'.format(cmd, self._list_to_str(values)))
 
 
 class RemoteCommand(_ConnectionCommand):
@@ -125,14 +141,16 @@ class RemoteCommand(_ConnectionCommand):
     Usage: remote COMMAND [ARGS...]
 
     Comandos disponibles:
-        down    Detiene y elimina los servicios en uno o más entornos.
-        ls      Lista los servicios disponibles.
-        prune   Purga los servicios en uno o más entornos.
-        ps      ----
-        restart Detiene y elimina los servicios en uno o más entornos.
-        start   Inicia los servicios en uno o más entornos.
-        stop    Detiene los servicios en uno o más entornos.
-        up      Crea e inicia los servicios en uno o más entornos.
+        config     Muestra la configuración del despliegue.
+        down       Detiene y elimina los servicios en uno o más entornos.
+        ls         Lista los servicios disponibles.
+        prune      Purga los servicios en uno o más entornos.
+        ps         Lista los servicios deplegados.
+        restart    Detiene y elimina los servicios en uno o más entornos.
+        start      Inicia los servicios en uno o más entornos.
+        stop       Detiene los servicios en uno o más entornos.
+        up         Crea e inicia los servicios en uno o más entornos.
+        update     Actualiza el repositorio con la configuración del despliegue.
     """
     def up(self, **kwargs):
         """
@@ -177,8 +195,7 @@ class RemoteCommand(_ConnectionCommand):
         """
         if self.yes(**kwargs):
             for _ in self._list_environ(kwargs):
-                services = self._list_to_str(self._services(kwargs))
-                self.run('docker-compose start {}'.format(services))
+                self._run_cmd('docker-compose start', self._services(kwargs))
 
     def stop(self, **kwargs):
         """
@@ -193,8 +210,7 @@ class RemoteCommand(_ConnectionCommand):
         """
         if self.yes(**kwargs):
             for _ in self._list_environ(kwargs):
-                services = self._list_to_str(self._services(kwargs))
-                self.run('docker-compose stop {}'.format(services))
+                self._run_cmd('docker-compose stop', self._services(kwargs))
 
     def restart(self, **kwargs):
         """
@@ -209,8 +225,7 @@ class RemoteCommand(_ConnectionCommand):
         """
         if self.yes(**kwargs):
             for _ in self._list_environ(kwargs):
-                services = self._list_to_str(self._services(kwargs))
-                self.run('docker-compose restart {}'.format(services))
+                self._run_cmd('docker-compose restart', self._services(kwargs))
 
     def ls(self, **kwargs):
         """
@@ -228,7 +243,7 @@ class RemoteCommand(_ConnectionCommand):
 
     def ps(self, **kwargs):
         """
-        Lista los servicios disponibles.
+        Lista los servicios deplegados.
 
         Usage: ps [options]
 
@@ -238,6 +253,20 @@ class RemoteCommand(_ConnectionCommand):
         """
         for _ in self._list_environ(kwargs):
             self.run("docker-compose ps")
+
+    def config(self, **kwargs):
+        """
+        Muestra la configuración del despliegue.
+
+        Usage: config (development|quality)
+
+        Opciones
+            -d, --development       Entorno de `DESARROLLO`
+            -q, --quality           Entorno de `QA/TESTING`
+        """
+        self.output.json(kwargs)
+        for _ in self._list_environ(kwargs):
+            self.run("docker-compose config --resolve-image-digests")
 
     def prune(self, **kwargs):
         """
@@ -252,25 +281,46 @@ class RemoteCommand(_ConnectionCommand):
         """
         message = '''
 [PRECAUCIÓN]
-
-  Se procederá a "PURGAR" el o los `entornos`, 
+  Se procederá a "PURGAR" el o los `entornos`,
   el siguiente proceso es "IRRÉVERSIBLE".
-
 --
-> Desdea continuar?'''
+Desdea continuar?'''
         if self.yes(message, **kwargs):
             for _ in self._list_environ(kwargs):
                 self.run('docker-compose down -v --rmi all --remove-orphans')
                 self.run('docker volume prune -f')
 
-    # FIXME 0608156 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-    # def rm(self, **kwargs):      >> elimina uno o más servicios.
-    # def rmi(self, **kwargs):     >> elimina una o más iméagenes.
-    # def config(self, **kwargs):  >> imprime la configuración de los servicios.
-    # def top(self, **kwargs):     >> muestra los procesos activos.
-    # def pull(self, **kwargs):    >> descarga las imágenes asociadas a los
-    #                                 servicios.
-    # def logs(self, **kwargs):    >> muestra la salida de los logs.
-    # def cmd(self, **kwargs):     >> ejecuta un comando docker / docker-compose
-    #                                 de forma remota.
-    # FIXME 0608156 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+    def update(self, **kwargs):
+        """
+        Actualiza el repositorio con la configuración del despliegue.
+
+        Usage: update [options]
+
+        Opciones
+            -d, --development       Entorno de `DESARROLLO`
+            -q, --quality           Entorno de `QA/TESTING`
+            -y, --yes               Responde "SI" a todas las preguntas.
+        """
+        if self.yes(**kwargs):
+            for _ in self._list_environ(kwargs):
+                self.run('git reset --hard origin/master')
+                self.run('git pull --rebase --stat origin master')
+
+    def cmd(self, **kwargs):
+        """
+        Ejecuta los comandos `docker`, `docker-compose` y `git` de forma remota.
+
+        Usage: cmd [options] CMD...
+
+        Opciones
+            -d, --development       Entorno de `DESARROLLO`
+            -q, --quality           Entorno de `QA/TESTING`
+            -y, --yes               Responde "SI" a todas las preguntas.
+        """
+        for _ in self._list_environ(kwargs):
+            cmd = kwargs['cmd']
+            if len(cmd) == 1:
+                cmd = cmd[0].split()
+            if cmd[0] not in ('docker', 'docker-compose', 'git'):
+                continue
+            self.run(self._list_to_str(cmd))
