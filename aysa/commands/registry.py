@@ -95,7 +95,6 @@ class ImageCommand(_RegistryCommand):
                     self.output.write('digest', d, tmpl=tmpl)
                 elif manifest:
                     self.output.json(m.history)
-            self.output.flush()
 
     def tag(self, **kwargs):
         """
@@ -120,8 +119,8 @@ class ImageCommand(_RegistryCommand):
                 src = Image(self._fix_image_name(x))
                 try:
                     self.api.delete_tag(src.repository, src.tag)
-                except:
-                    pass
+                except Exception as e:
+                    self.output.error(src, e)
 
 
 class ReleaseCommand(_RegistryCommand):
@@ -141,8 +140,8 @@ class ReleaseCommand(_RegistryCommand):
                 try:
                     rollback = '{}-rollback'.format(t.tag)
                     self.api.put_tag(t.repository, t.tag, rollback)
-                except:
-                    pass
+                except Exception as e:
+                    self.output.error(t, 'rollback', e)
                 self.api.put_tag(x.repository, x.tag, t.tag)
 
     def quality(self, **kwargs):

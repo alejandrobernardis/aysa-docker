@@ -294,6 +294,7 @@ class Image:
     def __init__(self, value):
         for k, v in get_parts(value).items():
             setattr(self, k, v)
+        self.value = value
 
     @property
     def image_tag(self):
