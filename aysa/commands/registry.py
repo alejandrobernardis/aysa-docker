@@ -61,9 +61,9 @@ class RegistryCommand(_RegistryCommand):
         registry COMMAND [ARGS...]
 
     Comandos disponibles:
-        ls        Lista los `tags` diponibles en el `repositorio`.
-        tag       Crea un nuevo `tag` a partir de otro existente.
-        rm        Elimina uno o mas `tags` existentes.
+        ls     Lista los `tags` diponibles en el `repositorio`.
+        tag    Crea un nuevo `tag` a partir de otro existente.
+        rm     Elimina uno o mas `tags` existentes.
     """
 
     def ls(self, **kwargs):
@@ -74,12 +74,12 @@ class RegistryCommand(_RegistryCommand):
             ls [options] [IMAGE...]
 
         Opciones:
-            -v, --verbose                   Activa el modo `verbose`.
-            -m, --manifest                  Activa el modo `manifest`, éste imprime
-                                            en pantalla el contenido del manifiesto,
-                                            anulando al modo `verbose`.
-            -t tags, --filter-tags=tags     Lista de `tags` separados por comas,
-                                            ex: "dev,rc,latest" [default: *]
+            -v, --verbose                  Activa el modo `verbose`.
+            -m, --manifest                 Activa el modo `manifest`, éste imprime
+                                           en pantalla el contenido del manifiesto,
+                                           anulando al modo `verbose`.
+            -t tags, --filter-tags=tags    Lista de `tags` separados por comas,
+                                           ex: "dev,rc,latest" [default: *]
         """
         tmpl = ' - {} = {}'
         verbose = kwargs.get('--verbose', False)

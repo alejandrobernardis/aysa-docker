@@ -168,10 +168,11 @@ class RemoteCommand(_ConnectionCommand):
             up [options] [SERVICE...]
 
         Opciones
-            -d, --development       Entorno de `DESARROLLO`
-            -q, --quality           Entorno de `QA/TESTING`
-            -u, --update            Actualiza el repositorio del despliegue.
-            -y, --yes               Responde "SI" a todas las preguntas.
+            -d, --development    Entorno de `DESARROLLO`
+            -q, --quality        Entorno de `QA/TESTING`
+            -u, --update         Actualiza el repositorio con la
+                                 configuración del despliegue.
+            -y, --yes            Responde "SI" a todas las preguntas.
         """
         if self.yes(**kwargs):
             for _ in self._list_environ(kwargs):
@@ -185,9 +186,9 @@ class RemoteCommand(_ConnectionCommand):
             down [options]
 
         Opciones
-            -d, --development       Entorno de `DESARROLLO`
-            -q, --quality           Entorno de `QA/TESTING`
-            -y, --yes               Responde "SI" a todas las preguntas.
+            -d, --development    Entorno de `DESARROLLO`
+            -q, --quality        Entorno de `QA/TESTING`
+            -y, --yes            Responde "SI" a todas las preguntas.
         """
         if self.yes(**kwargs):
             for _ in self._list_environ(kwargs):
@@ -201,9 +202,9 @@ class RemoteCommand(_ConnectionCommand):
             start [options] [SERVICE...]
 
         Opciones
-            -d, --development       Entorno de `DESARROLLO`
-            -q, --quality           Entorno de `QA/TESTING`
-            -y, --yes               Responde "SI" a todas las preguntas.
+            -d, --development    Entorno de `DESARROLLO`
+            -q, --quality        Entorno de `QA/TESTING`
+            -y, --yes            Responde "SI" a todas las preguntas.
         """
         if self.yes(**kwargs):
             for _ in self._list_environ(kwargs):
@@ -217,9 +218,9 @@ class RemoteCommand(_ConnectionCommand):
             stop [options] [SERVICE...]
 
         Opciones
-            -d, --development       Entorno de `DESARROLLO`
-            -q, --quality           Entorno de `QA/TESTING`
-            -y, --yes               Responde "SI" a todas las preguntas.
+            -d, --development    Entorno de `DESARROLLO`
+            -q, --quality        Entorno de `QA/TESTING`
+            -y, --yes            Responde "SI" a todas las preguntas.
         """
         if self.yes(**kwargs):
             for _ in self._list_environ(kwargs):
@@ -233,9 +234,9 @@ class RemoteCommand(_ConnectionCommand):
             restart [options] [SERVICE...]
 
         Opciones
-            -d, --development       Entorno de `DESARROLLO`
-            -q, --quality           Entorno de `QA/TESTING`
-            -y, --yes               Responde "SI" a todas las preguntas.
+            -d, --development    Entorno de `DESARROLLO`
+            -q, --quality        Entorno de `QA/TESTING`
+            -y, --yes            Responde "SI" a todas las preguntas.
         """
         if self.yes(**kwargs):
             for _ in self._list_environ(kwargs):
@@ -249,8 +250,8 @@ class RemoteCommand(_ConnectionCommand):
             ls [options]
 
         Opciones
-            -d, --development       Entorno de `DESARROLLO`
-            -q, --quality           Entorno de `QA/TESTING`
+            -d, --development    Entorno de `DESARROLLO`
+            -q, --quality        Entorno de `QA/TESTING`
         """
         for _ in self._list_environ(kwargs):
             for line in self._list_service():
@@ -264,8 +265,8 @@ class RemoteCommand(_ConnectionCommand):
             ps [options]
 
         Opciones
-            -d, --development       Entorno de `DESARROLLO`
-            -q, --quality           Entorno de `QA/TESTING`
+            -d, --development    Entorno de `DESARROLLO`
+            -q, --quality        Entorno de `QA/TESTING`
         """
         for _ in self._list_environ(kwargs):
             self.run("docker-compose ps")
@@ -275,11 +276,11 @@ class RemoteCommand(_ConnectionCommand):
         Muestra la configuración del despliegue.
 
         Usage:
-            config (development|quality)
+            config (--development|--quality)
 
         Opciones
-            -d, --development       Entorno de `DESARROLLO`
-            -q, --quality           Entorno de `QA/TESTING`
+            -d, --development    Entorno de `DESARROLLO`
+            -q, --quality        Entorno de `QA/TESTING`
         """
         for _ in self._list_environ(kwargs):
             self.run("docker-compose config --resolve-image-digests")
@@ -292,9 +293,9 @@ class RemoteCommand(_ConnectionCommand):
             prune [--yes] (--development|--quality)
 
         Opciones
-            -d, --development       Entorno de `DESARROLLO`
-            -q, --quality           Entorno de `QA/TESTING`
-            -y, --yes               Responde "SI" a todas las preguntas.
+            -d, --development    Entorno de `DESARROLLO`
+            -q, --quality        Entorno de `QA/TESTING`
+            -y, --yes            Responde "SI" a todas las preguntas.
         """
         message = '''
 [PRECAUCIÓN]
@@ -315,9 +316,9 @@ Desdea continuar?'''
             update [options]
 
         Opciones
-            -d, --development       Entorno de `DESARROLLO`
-            -q, --quality           Entorno de `QA/TESTING`
-            -y, --yes               Responde "SI" a todas las preguntas.
+            -d, --development   Entorno de `DESARROLLO`
+            -q, --quality       Entorno de `QA/TESTING`
+            -y, --yes           Responde "SI" a todas las preguntas.
         """
         if self.yes(**kwargs):
             for _ in self._list_environ(kwargs):
@@ -332,9 +333,9 @@ Desdea continuar?'''
             cmd [options] CMD...
 
         Opciones
-            -d, --development       Entorno de `DESARROLLO`
-            -q, --quality           Entorno de `QA/TESTING`
-            -y, --yes               Responde "SI" a todas las preguntas.
+            -d, --development    Entorno de `DESARROLLO`
+            -q, --quality        Entorno de `QA/TESTING`
+            -y, --yes            Responde "SI" a todas las preguntas.
         """
         for _ in self._list_environ(kwargs):
             cmd = kwargs['cmd']
