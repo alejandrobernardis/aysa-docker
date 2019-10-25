@@ -14,7 +14,6 @@ from aysa.commands.remote import RemoteCommand
 
 # logger
 log = logging.getLogger(__name__)
-console_handler = logging.StreamHandler(sys.stderr)
 
 
 # top level command
@@ -48,7 +47,6 @@ class TopLevelCommand(Command):
     def __init__(self, options=None, logger=None, **kwargs):
         super().__init__('aysa', options, logger=logger, **kwargs)
 
-    # Hacerlo dinámico !!!! ;)
     commands = {
         'config': ConfigCommand,
         'registry': ImageCommand,
@@ -60,18 +58,12 @@ class TopLevelCommand(Command):
 # dispatch
 def main():
     try:
-        #from http.client import HTTPConnection
-        #HTTPConnection.debuglevel = 1
-
-        TopLevelCommand({'version': __version__}, log)()
+        TopLevelCommand({'version': __version__}, log).parse()
         sys.exit(0)
-
     except KeyboardInterrupt:
         log.error("Aborting.")
-
     except Exception as e:
         log.error(e)
-
-    #import traceback
-    #traceback.print_exc()
+    # import traceback
+    # traceback.print_exc()
     sys.exit(1)

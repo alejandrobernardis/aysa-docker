@@ -57,7 +57,8 @@ class ImageCommand(_RegistryCommand):
     """
     Administra los `tags` para el despliegue de los servicios.
 
-    Usage: registry COMMAND [ARGS...]
+    Usage:
+        registry COMMAND [ARGS...]
 
     Comandos disponibles:
         ls        Lista los `tags` diponibles en el `repositorio`.
@@ -69,7 +70,8 @@ class ImageCommand(_RegistryCommand):
         """
         Lista los `tags` existentes en el repositorio.
 
-        Usage: ls [options] [IMAGE...]
+        Usage:
+            ls [options] [IMAGE...]
 
         Opciones:
             -v, --verbose                   Activa el modo `verbose`.
@@ -100,7 +102,8 @@ class ImageCommand(_RegistryCommand):
         """
         Crea un nuevo `tag` a partir de otro existente.
 
-        Usage: tag SOURCE_IMAGE_TAG TARGET_TAG
+        Usage:
+            tag SOURCE_IMAGE_TAG TARGET_TAG
         """
         src = Image(self._fix_image_name(kwargs['source_image_tag']))
         self.api.put_tag(src.repository, src.tag, kwargs['target_tag'])
@@ -109,7 +112,8 @@ class ImageCommand(_RegistryCommand):
         """
         Elimina un `tag` existente.
 
-        Usage: rm [options] IMAGE_TAG [IMAGE_TAG...]
+        Usage:
+            rm [options] IMAGE_TAG [IMAGE_TAG...]
 
         Opciones:
             -y, --yes    Responde "SI" a todas las preguntas.
@@ -127,7 +131,8 @@ class ReleaseCommand(_RegistryCommand):
     """
     Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
 
-    Usage: release COMMAND [ARGS...]
+    Usage:
+        release COMMAND [ARGS...]
 
     Comandos disponibles:
         quality       Crea las `imágenes` para el entorno de `QA/TESTING`.
@@ -148,7 +153,8 @@ class ReleaseCommand(_RegistryCommand):
         """
         Crea las `imágenes` para el entorno de `QA/TESTING`.
 
-        Usage: quality [options] [IMAGE...]
+        Usage:
+            quality [options] [IMAGE...]
 
         Opciones:
             -y, --yes    Responde "SI" a todas las preguntas.
@@ -159,7 +165,8 @@ class ReleaseCommand(_RegistryCommand):
         """
         Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
 
-        Usage: production [options] [IMAGE...]
+        Usage:
+            production [options] [IMAGE...]
 
         Opciones:
             -y, --yes    Responde "SI" a todas las preguntas.

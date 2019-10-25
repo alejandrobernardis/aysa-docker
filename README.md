@@ -23,6 +23,12 @@ Las dependencias se encuentran definidas en el archivo `Pipfile`, para la gesti√
 > pipenv shell
 ```
 
+#### Crear el archivo `requirements.txt`
+
+```bash
+> pipenv lock --requirements > requirements.txt
+```
+
 ## Documentaci√≥n
 
 Definir en cada archivo la siguiente cabecera:

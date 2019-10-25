@@ -20,6 +20,7 @@ rx_item = re.compile(r'^[a-z](?:[\w_])+_\d{1,3}\s{2,}[a-z0-9](?:[\w.-]+)'
 rx_service = re.compile(r'^[a-z](?:[\w_])+$', re.I)
 rx_login = re.compile(r'Login\sSucceeded$', re.I)
 
+
 class _ConnectionCommand(Command):
     _stage = None
     _stages = (DEVELOPMENT, QUALITY)
@@ -100,12 +101,12 @@ class _ConnectionCommand(Command):
     def _services(self, values):
         if isinstance(values, dict):
             values = values['service']
-        return [x for x in self._list_service(values)]
+        return set([x for x in self._list_service(values)])
 
     def _images(self, values):
         if isinstance(values, dict):
             values = values['image']
-        return [x for x in self._list_image(values)]
+        return set([x for x in self._list_image(values)])
 
     def _login(self):
         try:
@@ -122,13 +123,16 @@ class _ConnectionCommand(Command):
             services = self._services(kwargs)
             images = self._images(services)
             if services:
-                srv = self._list_to_str(set(services))
+                srv = self._list_to_str(services)
                 self.run('docker-compose rm -fsv {}'.format(srv))
             if images:
-                srv = self._list_to_str(set(images))
+                srv = self._list_to_str(images)
                 self.run('docker rmi -f {}'.format(srv))
             self.run('docker volume prune -f')
             self.run('docker-compose up -d --remove-orphans')
+        else:
+            raise SystemExit('No se pudo establecer la sesión '
+                             'con la `registry`.')
 
     def _run_cmd(self, cmd, values):
         self.run('{} {}'.format(cmd, self._list_to_str(values)))
@@ -138,7 +142,8 @@ class RemoteCommand(_ConnectionCommand):
     """
     Despliega las `imágenes` en los entornos de `DESARROLLO` y `QA/TESTING`.
 
-    Usage: remote COMMAND [ARGS...]
+    Usage:
+        remote COMMAND [ARGS...]
 
     Comandos disponibles:
         config     Muestra la configuración del despliegue.
@@ -156,7 +161,8 @@ class RemoteCommand(_ConnectionCommand):
         """
         Crea e inicia los servicios en uno o más entornos.
 
-        Usage: up [options] [SERVICE...]
+        Usage:
+            up [options] [SERVICE...]
 
         Opciones
             -d, --development       Entorno de `DESARROLLO`
@@ -171,7 +177,8 @@ class RemoteCommand(_ConnectionCommand):
         """
         Crea e inicia los servicios en uno o más entornos.
 
-        Usage: down [options]
+        Usage:
+            down [options]
 
         Opciones
             -d, --development       Entorno de `DESARROLLO`
@@ -186,7 +193,8 @@ class RemoteCommand(_ConnectionCommand):
         """
         Inicia los servicios en uno o más entornos.
 
-        Usage: start [options] [SERVICE...]
+        Usage:
+            start [options] [SERVICE...]
 
         Opciones
             -d, --development       Entorno de `DESARROLLO`
@@ -201,7 +209,8 @@ class RemoteCommand(_ConnectionCommand):
         """
         Detiene los servicios en uno o más entornos.
 
-        Usage: stop [options] [SERVICE...]
+        Usage:
+            stop [options] [SERVICE...]
 
         Opciones
             -d, --development       Entorno de `DESARROLLO`
@@ -216,7 +225,8 @@ class RemoteCommand(_ConnectionCommand):
         """
         Detiene los servicios en uno o más entornos.
 
-        Usage: restart [options] [SERVICE...]
+        Usage:
+            restart [options] [SERVICE...]
 
         Opciones
             -d, --development       Entorno de `DESARROLLO`
@@ -231,7 +241,8 @@ class RemoteCommand(_ConnectionCommand):
         """
         Lista los servicios disponibles.
 
-        Usage: ls [options]
+        Usage:
+            ls [options]
 
         Opciones
             -d, --development       Entorno de `DESARROLLO`
@@ -245,7 +256,8 @@ class RemoteCommand(_ConnectionCommand):
         """
         Lista los servicios deplegados.
 
-        Usage: ps [options]
+        Usage:
+            ps [options]
 
         Opciones
             -d, --development       Entorno de `DESARROLLO`
@@ -258,13 +270,13 @@ class RemoteCommand(_ConnectionCommand):
         """
         Muestra la configuración del despliegue.
 
-        Usage: config (development|quality)
+        Usage:
+            config (development|quality)
 
         Opciones
             -d, --development       Entorno de `DESARROLLO`
             -q, --quality           Entorno de `QA/TESTING`
         """
-        self.output.json(kwargs)
         for _ in self._list_environ(kwargs):
             self.run("docker-compose config --resolve-image-digests")
 
@@ -272,7 +284,8 @@ class RemoteCommand(_ConnectionCommand):
         """
         Purga los servicios en uno o más entornos.
 
-        Usage: prune [--yes] (--development|--quality)
+        Usage:
+            prune [--yes] (--development|--quality)
 
         Opciones
             -d, --development       Entorno de `DESARROLLO`
@@ -294,7 +307,8 @@ Desdea continuar?'''
         """
         Actualiza el repositorio con la configuración del despliegue.
 
-        Usage: update [options]
+        Usage:
+            update [options]
 
         Opciones
             -d, --development       Entorno de `DESARROLLO`
@@ -310,7 +324,8 @@ Desdea continuar?'''
         """
         Ejecuta los comandos `docker`, `docker-compose` y `git` de forma remota.
 
-        Usage: cmd [options] CMD...
+        Usage:
+            cmd [options] CMD...
 
         Opciones
             -d, --development       Entorno de `DESARROLLO`

@@ -26,11 +26,27 @@ setup(
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
     python_requires='>=3.6.*, <4',
 
-    # TODO(0608156): crear un archivo requirements.txt con pipenv.
-    install_requires=[],
+    install_requires=[
+        "bcrypt==3.1.7",
+        "certifi==2019.9.11",
+        "cffi==1.13.1",
+        "chardet==3.0.4",
+        "cryptography==2.8",
+        "docopt==0.6.2",
+        "fabric==2.5.0",
+        "idna==2.8",
+        "invoke==1.3.0",
+        "paramiko==2.6.0",
+        "pycparser==2.19",
+        "pynacl==1.3.0",
+        "requests==2.22.0",
+        "six==1.12.0",
+        "urllib3==1.25.6",
+    ],
 
     classifiers=[
         'Development Status :: 3 - Alpha',
+        'Environment :: Console',
         'Intended Audience :: Developers',
         'Topic :: Software Development :: Build Tools',
         'License :: OSI Approved :: MIT License',
