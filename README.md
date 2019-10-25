@@ -41,3 +41,44 @@ Definir en cada archivo la siguiente cabecera:
 
 ${END}
 ```
+
+## Instalación
+
+Mediante un entorno virtual:
+
+```bash
+# creamos el entorno virtual
+> virtualenv --python=python37 aysa
+
+# ingresamos al directorio del entorno  
+> cd aysa
+
+# iniciamos el entorno
+> source ./bin/activate
+
+# instalamos dentro del entorno
+> pip install https://github.com/alejandrobernardis/aysa-docker/archive/master.zip 
+
+# test
+> aysa -v
+... 1.0.0.dev.0
+```
+
+Sin entorno virtual:
+
+```bash
+> pip[3] install https://github.com/alejandrobernardis/aysa-docker/archive/master.zip
+```
+
+Desde el código fuente:
+
+```bash
+# clonamos el repositorio
+> git clone https://github.com/alejandrobernardis/aysa-docker.git
+
+# ingresamos al directorio del repositorio
+> cd aysa-docker
+
+# instalamos
+> python setup.py install
+```
