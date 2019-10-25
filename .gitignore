@@ -108,3 +108,4 @@ _ignore*
 _proto/
 .DS_*
 *.sublime*
+!aysa.spec
