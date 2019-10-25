@@ -53,7 +53,7 @@ class _RegistryCommand(Command):
                 yield Image(x)
 
 
-class ImageCommand(_RegistryCommand):
+class RegistryCommand(_RegistryCommand):
     """
     Administra los `tags` para el despliegue de los servicios.
 

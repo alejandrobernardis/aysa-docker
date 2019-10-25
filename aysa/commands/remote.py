@@ -120,6 +120,9 @@ class _ConnectionCommand(Command):
     def _deploy(self, **kwargs):
         if self._login():
             self.run('docker-compose stop')
+            if kwargs.pop('--update', False) is True:
+                self.run('git reset --hard')
+                self.run('git pull --rebase --stat')
             services = self._services(kwargs)
             images = self._images(services)
             if services:
@@ -167,6 +170,7 @@ class RemoteCommand(_ConnectionCommand):
         Opciones
             -d, --development       Entorno de `DESARROLLO`
             -q, --quality           Entorno de `QA/TESTING`
+            -u, --update            Actualiza el repositorio del despliegue.
             -y, --yes               Responde "SI" a todas las preguntas.
         """
         if self.yes(**kwargs):
@@ -317,8 +321,8 @@ Desdea continuar?'''
         """
         if self.yes(**kwargs):
             for _ in self._list_environ(kwargs):
-                self.run('git reset --hard origin/master')
-                self.run('git pull --rebase --stat origin master')
+                self.run('git reset --hard')
+                self.run('git pull --rebase --stat')
 
     def cmd(self, **kwargs):
         """
