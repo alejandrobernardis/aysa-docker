@@ -11,9 +11,9 @@ from aysa.commands.config import ConfigCommand
 from aysa.commands.registry import RegistryCommand, ReleaseCommand
 from aysa.commands.remote import RemoteCommand
 
-
-# logger
-log = logging.getLogger(__name__)
+# set root logger
+logger = logging.getLogger()
+logger.addHandler(logging.StreamHandler(sys.stderr))
 
 
 # top level command
@@ -58,9 +58,9 @@ class TopLevelCommand(Command):
 # dispatcher
 def main():
     try:
-        TopLevelCommand({'version': __version__}, log).parse()
+        TopLevelCommand({'version': __version__}, logger).parse()
     except KeyboardInterrupt:
-        log.error("Aborting.")
+        logger.error("Aborting.")
     except Exception as e:
-        log.error(e)
+        logger.error(e)
     sys.exit(1)

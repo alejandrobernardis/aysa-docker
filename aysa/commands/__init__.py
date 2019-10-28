@@ -5,15 +5,16 @@
 
 import sys
 import json
+import logging
 from copy import deepcopy
 from pathlib import Path
 from docopt import docopt, DocoptExit
 from inspect import getdoc, isclass
 from configparser import ConfigParser, ExtendedInterpolation
 
+ENV_FILE = '~/.aysa/config.ini'
 CONST_COMMAND = 'COMMAND'
 CONST_ARGS = 'ARGS'
-ENV_FILE = '~/.aysa/config.ini'
 
 
 def docopt_helper(docstring, *args, **kwargs):
@@ -65,13 +66,15 @@ def is_yes(value):
 
 class Command:
     def __init__(self, command, options=None, **kwargs):
-        self._output = Printer()
         self.command = command
         self.options = options or {}
         self.options.setdefault('options_first', True)
-        self.parent = kwargs.pop('parent', None)
-        self._logger = kwargs.pop('logger', None)
+        # helpers
         self._env = None
+        self._output = Printer()
+        self._parent = kwargs.pop('parent', None)
+        self._logger = kwargs.pop('logger', None)
+        # event
         self.on_init(**kwargs)
 
     @property
@@ -87,6 +90,10 @@ class Command:
             else:
                 break
         return value
+
+    @property
+    def parent(self):
+        return self._parent
 
     @property
     def o(self):
@@ -114,13 +121,17 @@ class Command:
     def env(self):
         return self.top_level._env
 
+    @env.setter
+    def env(self, value):
+        self.top_level._env = value
+
     @property
     def env_copy(self):
         return deepcopy(self.env)
 
-    @env.setter
-    def env(self, value):
-        self.top_level._env = value
+    @property
+    def env_file(self):
+        return self.global_options.get('--env', None)
 
     @property
     def debug(self):
@@ -130,15 +141,16 @@ class Command:
     def verbose(self):
         return self.global_options.get('--verbose', False)
 
-    @property
-    def env_file(self):
-        return self.global_options.get('--env', None)
-
     def parse(self, argv=None, *args, **kwargs):
         opt, doc = docopt_helper(self, argv, *args, **self.options, **kwargs)
         cmd = opt.pop(CONST_COMMAND)
         arg = opt.pop(CONST_ARGS)
         self.options.update(opt)
+        self.env_load()
+
+        if self.debug:
+            self.logger.setLevel(logging.DEBUG)
+        self.logger.debug('Debugger is enabled.')
 
         try:
             scmd = self.find_command(cmd)
@@ -161,8 +173,6 @@ class Command:
 
         opt, doc = docopt_helper(command, argv, options_first=True)
         opt = {k.lower(): v for k, v in opt.items()}
-        self.env_load()
-
         command(**opt, global_args=global_args)
 
         self.on_finish()
@@ -181,7 +191,10 @@ class Command:
         return self.parse(argv, *args, **kwargs)
 
     def __str__(self):
-        return '<Command="{}">'.format(self.command)
+        return self.command
+
+    def __repr__(self):
+        return '<{} Command="{}">'.format(self.__class__.__name__, self.command)
 
     def input(self, message=None, recursive=False, default=None, values=None,
               cast=None):
@@ -204,7 +217,7 @@ class Command:
             except:
                 if recursive is True:
                     return self.input(message, recursive, default, cast)
-                raise SystemExit('El valor ingresado no es correcto: ' + value)
+                raise CommandExit('El valor ingresado no es correcto: ' + value)
         return value
 
     def yes(self, message=None, **kwargs):

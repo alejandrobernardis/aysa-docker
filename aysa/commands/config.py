@@ -31,6 +31,8 @@ class ConfigCommand(Command):
         Usage:
             ls [SECTION...]
         """
+        if not self.env:
+            raise ValueError('La configuración del entorno está vacía.')
         sections_filter = kwargs['section']
         self.output.blank()
         for s, sv in self.env.items():
@@ -52,15 +54,23 @@ class ConfigCommand(Command):
         Usage:
             update SECTION_VARIABLE VALUE
         """
-        section, _, variable = kwargs['section_variable'].partition('.')
-        if variable not in self.env[section]:
+        section, sep, variable = kwargs['section_variable'].partition('.')
+        if not sep or not variable:
+            raise ValueError('La definición de la sección "{}" y variable "{}" '
+                             'es incorrecta, recuerda que debes expresarla '
+                             'separando la sección de la variable '
+                             'con un punto (.), ex: "<sección>.<variable>"'
+                             .format(section, variable))
+        new_value = kwargs['value']
+        if variable == CREDENTIALS:
+            password = getpass()
+            if new_value and password:
+                new_value = '{}:{}'.format(new_value, password)
+        try:
+            self.env[section][variable] = new_value
+            self.env_save()
+        except KeyError:
             raise KeyError('La sección y/o variable "{}.{}" no están '
                            'soportadas por la acutal versión del '
                            'archivo de configuración.'
                            .format(section, variable))
-        new_value = kwargs['value']
-        if variable == CREDENTIALS:
-            password = getpass()
-            new_value = '{}:{}'.format(new_value, password)
-        self.env[section][variable] = new_value
-        self.env_save()

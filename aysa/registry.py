@@ -20,7 +20,6 @@ from requests.auth import HTTPBasicAuth
 TAG_SEP = ':'
 REPO_SEP = '/'
 MANIFEST_VERSION = 'v2'
-
 MEDIA_TYPES = {
     'v1' : 'application/vnd.docker.distribution.manifest.v1+json',
     'v2' : 'application/vnd.docker.distribution.manifest.v2+json',
@@ -28,9 +27,12 @@ MEDIA_TYPES = {
 }
 
 rx_schema = re.compile(r'(localhost|.*\.local(?:host)?(?::\d{1,5})?)$', re.I)
-rx_registry = re.compile(r'^(localhost|[\w\-]+(\.[\w\-]+)+)(?::\d{1,5})?\/', re.I)
+rx_registry = re.compile(r'^(localhost|[\w\-]+(\.[\w\-]+)+)(?::\d{1,5})?\/',
+                         re.I)
 rx_repository = re.compile(r'^[a-z0-9]+(?:[/:._-][a-z0-9]+)*$')
 
+
+# methods >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 def get_media_type(value=MANIFEST_VERSION, key='Accept', obj=True):
     value = MEDIA_TYPES[value if value in MEDIA_TYPES else MANIFEST_VERSION]
@@ -74,7 +76,10 @@ def get_registry(value):
 
 
 def get_parts(value):
-    # value => {registry:port}/{namespace}/{repository}:{tag}
+    """
+    Formato del string:
+      - {registry:port}/{namespace}/{repository}:{tag}
+    """
     if not rx_repository.match(get_repository(value)):
         raise RegistryError('El endpoint "{}" está mal formateado.'
                             .format(value))
@@ -203,8 +208,8 @@ class Tags(IterEntity):
     methods_supported = 'GET'
     response_key = 'tags'
 
-    def __init__(self, client, name):
-        super().__init__(client)
+    def __init__(self, client, name, prefix_filter=None):
+        super().__init__(client, prefix_filter)
         self.set_url(name=name)
 
 
@@ -221,7 +226,7 @@ class SlimManifest(Entity):
         headers = kwargs.pop('headers', {})
         media_type = get_media_type(self.media_type, obj=False)
         update = {'Accept': '*/*', 'Content-Type': media_type} \
-            if method in ('PUT', 'DELETE') else {'Accept': media_type}
+                  if method in ('PUT', 'DELETE') else {'Accept': media_type}
         headers.update(update)
         kwargs['headers'] = headers
         return super().request(method, *args, **kwargs)
@@ -233,23 +238,15 @@ class FatManifest(SlimManifest):
 
 
 class Api:
-    """
-    opt = dict(insecure=True, credentials='dashboard:dashboard')
-    api = Api('10.17.65.128:5000', **opt)
-
-    for x in api.catalog():
-        for y in api.tags(x):
-            print(x, y)
-    """
     def __init__(self, host, insecure=False, verify=True, credentials=None,
                  **kwargs):
         self.registry = Registry(host, insecure, verify, credentials)
 
-    def catalog(self):
-        return Catalog(self.registry)
+    def catalog(self, prefix_filter=None):
+        return Catalog(self.registry, prefix_filter)
 
-    def tags(self, name):
-        return Tags(self.registry, name)
+    def tags(self, name, prefix_filter=None):
+        return Tags(self.registry, name, prefix_filter)
 
     def put_tag(self, name, reference, target):
         return self.put_manifest(name, target, self.manifest(name, reference))
@@ -257,19 +254,13 @@ class Api:
     def delete_tag(self, name, reference):
         return self.del_manifest(name, self.digest(name, reference))
 
-    def manifest(self, name, reference, fat=False, obj=False, **kwargs):
-        r = self.get_manifest(name, reference, fat).json()
-        return Manifest(r) if obj is True else r
-
     def digest(self, name, reference, **kwargs):
         r = self.get_manifest(name, reference)
         return r.headers.get('Docker-Content-Digest', None)
 
-    # helpers
-
-    def _manifest(self, name, reference, fat=False):
-        args = (self.registry, name, reference)
-        return SlimManifest(*args) if fat is False else FatManifest(*args)
+    def manifest(self, name, reference, fat=False, obj=False, **kwargs):
+        r = self.get_manifest(name, reference, fat).json()
+        return Manifest(r) if obj is True else r
 
     def get_manifest(self, name, reference, fat=False, **kwargs):
         return self._manifest(name, reference, fat)\
@@ -282,6 +273,10 @@ class Api:
     def del_manifest(self, name, reference, **kwargs):
         return self._manifest(name, reference)\
                    .request('DELETE', **kwargs)
+
+    def _manifest(self, name, reference, fat=False):
+        args = (self.registry, name, reference)
+        return SlimManifest(*args) if fat is False else FatManifest(*args)
 
 
 class Image:
@@ -302,11 +297,14 @@ class Image:
 
     @property
     def full(self):
-        return '{}{}:{}'.format(self.registry, self.repository, self.tag)
+        return '{}{}'.format(self.registry or '', self.image_tag)
 
     def __str__(self):
-        return '<Namespace="{}" Image="{}" Tag="{}">'\
-               .format(self.namespace or '', self.image or '', self.tag or '')
+        return '<{} Namespace="{}" Image="{}" Tag="{}">'\
+               .format(self.registry or '',
+                       self.namespace or '',
+                       self.image or '',
+                       self.tag or '')
 
     def __repr__(self):
         return self.image
