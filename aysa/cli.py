@@ -55,15 +55,12 @@ class TopLevelCommand(Command):
     }
 
 
-# dispatch
+# dispatcher
 def main():
     try:
         TopLevelCommand({'version': __version__}, log).parse()
-        sys.exit(0)
     except KeyboardInterrupt:
         log.error("Aborting.")
     except Exception as e:
         log.error(e)
-    # import traceback
-    # traceback.print_exc()
     sys.exit(1)

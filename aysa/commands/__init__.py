@@ -65,7 +65,7 @@ def is_yes(value):
 
 class Command:
     def __init__(self, command, options=None, **kwargs):
-        self.output = Printer()
+        self._output = Printer()
         self.command = command
         self.options = options or {}
         self.options.setdefault('options_first', True)
@@ -89,8 +89,16 @@ class Command:
         return value
 
     @property
-    def global_options(self):
-        return self.top_level.options
+    def o(self):
+        return self._output
+
+    @property
+    def output(self):
+        return self._output
+
+    @property
+    def l(self):
+        return self.logger
 
     @property
     def logger(self):
@@ -99,13 +107,16 @@ class Command:
         return self.top_level._logger
 
     @property
+    def global_options(self):
+        return self.top_level.options
+
+    @property
     def env(self):
         return self.top_level._env
 
     @property
     def env_copy(self):
         return deepcopy(self.env)
-
 
     @env.setter
     def env(self, value):
@@ -215,6 +226,7 @@ class Command:
 
     def done(self):
         self.output.done()
+        sys.exit(0)
 
     def on_init(self, *args, **kwargs):
         pass
