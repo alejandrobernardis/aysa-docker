@@ -111,7 +111,9 @@ class Command:
     def logger(self):
         if self._logger is not None:
             return self._logger
-        return self.top_level._logger
+        else:
+            self._logger = logging.getLogger(self.__class__.__name__)
+        return self.top_level.logger
 
     @property
     def global_options(self):
@@ -138,19 +140,45 @@ class Command:
         return self.global_options.get('--debug', False)
 
     @property
+    def debug_output(self):
+        return self.global_options.get('--debug-output', False)
+
+    @property
     def verbose(self):
         return self.global_options.get('--verbose', False)
+
+    def setup_logger(self, **kwargs):
+        if self.debug:
+            level = logging.DEBUG
+        elif self.verbose:
+            level = logging.INFO
+        else:
+            level = logging.ERROR
+
+        root = logging.getLogger()
+
+        if self.debug_output:
+            file_formatter = logging.Formatter('%(asctime)s %(levelname)s '
+                                               '%(filename)s %(lineno)d '
+                                               '%(message)s')
+            file_handler = logging.FileHandler(self.debug_output, 'w')
+            file_handler.setFormatter(file_formatter)
+            file_handler.setLevel(logging.DEBUG)
+            root.addHandler(file_handler)
+            level = logging.ERROR
+
+        console_handler = logging.StreamHandler(sys.stderr)
+        console_handler.setLevel(level)
+        root.addHandler(console_handler)
+        root.setLevel(logging.DEBUG)
 
     def parse(self, argv=None, *args, **kwargs):
         opt, doc = docopt_helper(self, argv, *args, **self.options, **kwargs)
         cmd = opt.pop(CONST_COMMAND)
         arg = opt.pop(CONST_ARGS)
         self.options.update(opt)
+        self.setup_logger()
         self.env_load()
-
-        if self.debug:
-            self.logger.setLevel(logging.DEBUG)
-        self.logger.debug('Debugger is enabled.')
 
         try:
             scmd = self.find_command(cmd)

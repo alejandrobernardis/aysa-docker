@@ -145,9 +145,13 @@ class ReleaseCommand(_RegistryCommand):
                 try:
                     rollback = '{}-rollback'.format(t.tag)
                     self.api.put_tag(t.repository, t.tag, rollback)
+                    self.logger.debug('release source: %s, target: %s',
+                                      t.tag, rollback)
                 except Exception as e:
                     self.output.error(t, 'rollback', e)
                 self.api.put_tag(x.repository, x.tag, t.tag)
+                self.logger.debug('release source: %s, target: %s',
+                                  x.tag, t.tag)
 
     def quality(self, **kwargs):
         """
