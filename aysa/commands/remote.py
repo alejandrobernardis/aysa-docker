@@ -37,7 +37,8 @@ class _ConnectionCommand(Command):
             self.s_close()
         if self._connection_cache is None:
             env = self.env_copy[stage]
-            env.pop('path', None)
+            for x in ('path', 'tag'):
+                env.pop(x, None)
             if env['user'].lower() == 'root':
                 raise SystemExit('El usuario "root" no está permitido para '
                                  'ejecutar despliegues.')
