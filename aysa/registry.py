@@ -3,14 +3,12 @@
 # Created: 2019/10/15
 # ~
 """
- Docker Registry Documentation: https://docs.docker.com/registry/
+Docker Registry Documentation: https://docs.docker.com/registry/
 
- TODO i0608156: Agregar autenticación por token.
-                https://docs.docker.com/registry/configuration/#auth
-
- TODO i0608156: Evaluar la implementación de un paginador para la iteración
-                del catálogo y tags.
-
+TODO i0608156: Agregar autenticación por token.
+               https://docs.docker.com/registry/configuration/#auth
+TODO i0608156: Evaluar la implementación de un paginador para la iteración
+               del catálogo y tags.
 """
 import re
 import json
@@ -21,8 +19,8 @@ TAG_SEP = ':'
 REPO_SEP = '/'
 MANIFEST_VERSION = 'v2'
 MEDIA_TYPES = {
-    'v1' : 'application/vnd.docker.distribution.manifest.v1+json',
-    'v2' : 'application/vnd.docker.distribution.manifest.v2+json',
+    'v1': 'application/vnd.docker.distribution.manifest.v1+json',
+    'v2': 'application/vnd.docker.distribution.manifest.v2+json',
     'v2f': 'application/vnd.docker.distribution.manifest.list.v2+json'
 }
 
@@ -32,7 +30,7 @@ rx_registry = re.compile(r'^(localhost|[\w\-]+(\.[\w\-]+)+)(?::\d{1,5})?\/',
 rx_repository = re.compile(r'^[a-z0-9]+(?:[/:._-][a-z0-9]+)*$')
 
 
-# methods >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# methods >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 def get_media_type(value=MANIFEST_VERSION, key='Accept', obj=True):
     value = MEDIA_TYPES[value if value in MEDIA_TYPES else MANIFEST_VERSION]
@@ -226,7 +224,7 @@ class SlimManifest(Entity):
         headers = kwargs.pop('headers', {})
         media_type = get_media_type(self.media_type, obj=False)
         update = {'Accept': '*/*', 'Content-Type': media_type} \
-                  if method in ('PUT', 'DELETE') else {'Accept': media_type}
+            if method in ('PUT', 'DELETE') else {'Accept': media_type}
         headers.update(update)
         kwargs['headers'] = headers
         return super().request(method, *args, **kwargs)
@@ -340,7 +338,7 @@ class Manifest:
                 raw = self._raw['history'][0]['v1Compatibility']
                 self._history = json.loads(raw)
             return self._history
-        except:
+        except Exception:
             return {}
 
     @property

@@ -44,6 +44,7 @@ class TopLevelCommand(Command):
 
     > Utilice `aysa COMMAND (-h|--help)` para ver la `ayuda` especifica del comando.
     """
+
     def __init__(self, options=None, **kwargs):
         super().__init__('aysa', options, **kwargs)
 

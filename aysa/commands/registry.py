@@ -138,6 +138,7 @@ class ReleaseCommand(_RegistryCommand):
         quality       Crea las `imágenes` para el entorno de `QA/TESTING`.
         production    Crea las `imágenes` para el entorno de `PRODUCCIÓN`.
     """
+
     def _release(self, source_tag, target_tag, **kwargs):
         if self.yes(**kwargs):
             for x in self._list(kwargs['image'], source_tag):

@@ -114,7 +114,7 @@ class _ConnectionCommand(Command):
             cmd = 'docker login -u {} -p {} {}' \
                   .format(*env.credentials.split(':'), env.host)
             return rx_login.match(self.run(cmd, hide=True).stdout) is not None
-        except:
+        except Exception:
             return False
 
     def _deploy(self, **kwargs):
@@ -160,6 +160,7 @@ class RemoteCommand(_ConnectionCommand):
         up         Crea e inicia los servicios en uno o más entornos.
         update     Actualiza el repositorio con la configuración del despliegue.
     """
+
     def up(self, **kwargs):
         """
         Crea e inicia los servicios en uno o más entornos.

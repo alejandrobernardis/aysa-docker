@@ -96,16 +96,8 @@ class Command:
         return self._parent
 
     @property
-    def o(self):
-        return self._output
-
-    @property
     def output(self):
         return self._output
-
-    @property
-    def l(self):
-        return self.logger
 
     @property
     def logger(self):
@@ -211,7 +203,7 @@ class Command:
             if hasattr(self, 'commands'):
                 return getattr(self, 'commands')[command]
             return getattr(self, command)
-        except:
+        except Exception:
             pass
         raise NoSuchCommand(command)
 
@@ -222,7 +214,8 @@ class Command:
         return self.command
 
     def __repr__(self):
-        return '<{} Command="{}">'.format(self.__class__.__name__, self.command)
+        return '<{} Command="{}">'\
+               .format(self.__class__.__name__, self.command)
 
     def input(self, message=None, recursive=False, default=None, values=None,
               cast=None):
@@ -242,10 +235,10 @@ class Command:
         if cast is not None:
             try:
                 value = cast(value)
-            except:
+            except Exception:
                 if recursive is True:
                     return self.input(message, recursive, default, cast)
-                raise CommandExit('El valor ingresado no es correcto: ' + value)
+                raise CommandExit('Valor incorrecto: ' + value)
         return value
 
     def yes(self, message=None, **kwargs):
@@ -294,8 +287,8 @@ class Printer:
 
     def _parse(self, *values, sep=' ', end='\n', endx=None, **kwargs):
         tmpl = kwargs.pop('tmpl', None)
-        value = tmpl.format(*values) if tmpl is not None else \
-                 sep.join([str(x) for x in values])
+        value = tmpl.format(*values) if tmpl is not None \
+            else sep.join([str(x) for x in values])
         if kwargs.pop('lower', False):
             value = value.lower()
         if kwargs.pop('upper', False):
@@ -351,9 +344,6 @@ class Printer:
         value = self._parse(*values, **kwargs)
         if value:
             self.output.write(value)
-
-    def print(self, *values, **kwargs):
-        self.write(*values, **kwargs)
 
     def flush(self, *values, **kwargs):
         if values:

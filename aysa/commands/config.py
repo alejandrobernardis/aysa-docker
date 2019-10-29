@@ -24,6 +24,7 @@ class ConfigCommand(Command):
                   pasar el valor de la contraseña, éste es solicitado
                   posteriomente.
     """
+
     def ls(self, **kwargs):
         """
         Lista todas las `variables` de configuración.
@@ -55,11 +56,12 @@ class ConfigCommand(Command):
             update SECTION_VARIABLE VALUE
         """
         section, sep, variable = kwargs['section_variable'].partition('.')
-        self.logger.debug('update section: %s, variable: %s', section, variable)
+        self.logger.debug('update section: %s, variable: %s',
+                          section, variable)
         if not sep or not variable:
-            raise ValueError('La definición de la sección "{}" y variable "{}" '
-                             'es incorrecta, recuerda que debes expresarla '
-                             'separando la sección de la variable '
+            raise ValueError('La definición de la sección "{}" y variable '
+                             '"{}" es incorrecta, recuerda que debes '
+                             'expresarla separando la sección de la variable '
                              'con un punto (.), ex: "<sección>.<variable>"'
                              .format(section, variable))
         new_value = kwargs['value']
