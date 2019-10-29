@@ -128,9 +128,6 @@ class _ConnectionCommand(Command):
     def _deploy(self, **kwargs):
         if self._login():
             self.run('docker-compose stop')
-            if kwargs.pop('--update', False) is True:
-                self.run('git reset --hard')
-                self.run('git pull --rebase --stat')
             services = self._services(kwargs)
             images = self._images(services)
             if services:
@@ -140,6 +137,9 @@ class _ConnectionCommand(Command):
                 srv = self._list_to_str(images)
                 self.run('docker rmi -f {}'.format(srv))
             self.run('docker volume prune -f')
+            if kwargs.pop('--update', False) is True:
+                self.run('git reset --hard')
+                self.run('git pull --rebase --stat')
             self.run('docker-compose up -d --remove-orphans')
         else:
             raise SystemExit('No se pudo establecer la sesión '

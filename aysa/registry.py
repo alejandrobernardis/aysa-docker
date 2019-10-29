@@ -2,6 +2,7 @@
 # Email: alejandro.bernardis at gmail.com
 # Created: 2019/10/15
 # ~
+
 """
 Docker Registry Documentation: https://docs.docker.com/registry/
 
@@ -10,6 +11,7 @@ TODO i0608156: Agregar autenticación por token.
 TODO i0608156: Evaluar la implementación de un paginador para la iteración
                del catálogo y tags.
 """
+
 import re
 import json
 import requests
