@@ -56,8 +56,8 @@ class ConfigCommand(Command):
             update SECTION_VARIABLE VALUE
         """
         section, sep, variable = kwargs['section_variable'].partition('.')
-        self.logger.debug('update section: %s, variable: %s',
-                          section, variable)
+        self.logger.info('update section: %s, variable: %s',
+                         section, variable)
         if not sep or not variable:
             raise ValueError('La definición de la sección "{}" y variable '
                              '"{}" es incorrecta, recuerda que debes '
@@ -65,16 +65,16 @@ class ConfigCommand(Command):
                              'con un punto (.), ex: "<sección>.<variable>"'
                              .format(section, variable))
         new_value = kwargs['value']
-        self.logger.debug('update value: %s', new_value)
+        self.logger.info('update value: %s', new_value)
         if variable == CREDENTIALS:
             password = getpass()
             if new_value and password:
                 new_value = '{}:{}'.format(new_value, password)
-                self.logger.debug('update password')
+                self.logger.info('update password')
         try:
             self.env[section][variable] = new_value
             self.env_save()
-            self.logger.debug('update done')
+            self.logger.info('update done')
         except KeyError:
             raise KeyError('La sección y/o variable "{}.{}" no están '
                            'soportadas por la acutal versión del '

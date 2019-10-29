@@ -159,12 +159,17 @@ class Command:
             root.addHandler(file_handler)
             level = logging.ERROR
 
+        console_formatter = logging.Formatter('\033[36m[%(levelname)s] '
+                                              '%(message)s\033[0m')
         console_handler = logging.StreamHandler(sys.stderr)
+        console_handler.setFormatter(console_formatter)
         console_handler.setLevel(level)
         root.addHandler(console_handler)
         root.setLevel(logging.DEBUG)
 
     def parse(self, argv=None, *args, **kwargs):
+        self.logger.info('parse argv: %s, args: %s, kwargs: %s',
+                         argv, args, kwargs)
         opt, doc = docopt_helper(self, argv, *args, **self.options, **kwargs)
         cmd = opt.pop(CONST_COMMAND)
         arg = opt.pop(CONST_ARGS)
@@ -188,6 +193,8 @@ class Command:
             raise CommandExit(sdoc)
 
     def execute(self, command, argv=None, global_args=None, **kwargs):
+        self.logger.info('excute command: %s, argv: %s, global_args: %s, '
+                         'kwargs: %s', command, argv, global_args, kwargs)
         if isinstance(command, str):
             command = self.find_command(command)
 

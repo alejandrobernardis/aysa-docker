@@ -74,24 +74,24 @@ class RegistryCommand(_RegistryCommand):
             ls [options] [IMAGE...]
 
         Opciones:
-            -v, --verbose                  Activa el modo `verbose`.
+            -d, --detail                   Activa el modo `detail`.
             -m, --manifest                 Activa el modo `manifest`, éste imprime
                                            en pantalla el contenido del manifiesto,
-                                           anulando al modo `verbose`.
+                                           anulando al modo `detail`.
             -t tags, --filter-tags=tags    Lista de `tags` separados por comas,
                                            ex: "dev,rc,latest" [default: *]
         """
         tmpl = ' - {} = {}'
-        verbose = kwargs.get('--verbose', False)
+        detail = kwargs.get('--detail', False)
         manifest = kwargs.get('--manifest', False)
         env = self.env.registry
         self.output.head(env.host, env.namespace, tmpl='[REGISTRY]: {}/{}:',
                          title=False)
         for x in self._list(kwargs['image'], kwargs['--filter-tags']):
             self.output.bullet(x.repository, x.tag, tmpl='{}:{}')
-            if verbose or manifest:
+            if detail or manifest:
                 m = self.api.manifest(x.repository, x.tag, True, True)
-                if verbose and not manifest:
+                if detail and not manifest:
                     self.output.write('created', m.created, tmpl=tmpl)
                     d = self.api.digest(x.repository, x.tag)
                     self.output.write('digest', d, tmpl=tmpl)
@@ -107,6 +107,8 @@ class RegistryCommand(_RegistryCommand):
         """
         src = Image(self._fix_image_name(kwargs['source_image_tag']))
         self.api.put_tag(src.repository, src.tag, kwargs['target_tag'])
+        self.logger.info('tag repository: %s, tag: %s',
+                          src.repository, src.tag)
 
     def rm(self, **kwargs):
         """
@@ -123,8 +125,11 @@ class RegistryCommand(_RegistryCommand):
                 src = Image(self._fix_image_name(x))
                 try:
                     self.api.delete_tag(src.repository, src.tag)
+                    self.logger.info('rm repository: %s, tag: %s',
+                                      src.repository, src.tag)
                 except Exception as e:
-                    self.output.error(src, e)
+                    self.logger.error('No se pudo eliminar la image "%s": %s',
+                                      src.image_tag, e)
 
 
 class ReleaseCommand(_RegistryCommand):
@@ -146,13 +151,14 @@ class ReleaseCommand(_RegistryCommand):
                 try:
                     rollback = '{}-rollback'.format(t.tag)
                     self.api.put_tag(t.repository, t.tag, rollback)
-                    self.logger.debug('release source: %s, target: %s',
-                                      t.tag, rollback)
+                    self.logger.info('release source: %s, target: %s',
+                                     t.tag, rollback)
                 except Exception as e:
-                    self.output.error(t, 'rollback', e)
+                    self.logger.error('Rollback imagen "%s": %s',
+                                      t.image_tag, e)
                 self.api.put_tag(x.repository, x.tag, t.tag)
-                self.logger.debug('release source: %s, target: %s',
-                                  x.tag, t.tag)
+                self.logger.info('release source: %s, target: %s',
+                                 x.tag, t.tag)
 
     def quality(self, **kwargs):
         """

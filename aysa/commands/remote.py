@@ -44,6 +44,7 @@ class _ConnectionCommand(Command):
             pkey = Path(env.pop('pkey', None)).expanduser()
             env['connect_kwargs'] = {'key_filename': str(pkey)}
             self._connection_cache = Connection(**env)
+            self.logger.info('connection stage: %s, env: %s', stage, env)
             self._stage = stage
         return self._connection_cache
 
@@ -57,6 +58,7 @@ class _ConnectionCommand(Command):
         return self._connection_cache
 
     def run(self, command, hide=False, **kwargs):
+        self.logger.info('run command: %s, kwargs: %s', command, kwargs)
         return self.cnx.run(command, hide=hide, **kwargs)
 
     @lru_cache()
@@ -111,11 +113,16 @@ class _ConnectionCommand(Command):
     def _login(self):
         try:
             env = self.env.registry
-            cmd = 'docker login -u {} -p {} {}' \
-                  .format(*env.credentials.split(':'), env.host)
-            return rx_login.match(self.run(cmd, hide=True).stdout) is not None
-        except Exception:
+            crd = env.credentials.split(':')
+            cmd = 'docker login -u {} -p {} {}'.format(*crd, env.host)
+            res = rx_login.match(self.run(cmd, hide=True).stdout) is not None
+            self.logger.info('login registry: %s, username: %s, status: %s',
+                             env.host, crd[0], res)
+            return res
+        except Exception as e:
+            self.logger.error('login error: %s ', e)
             return False
+
 
     def _deploy(self, **kwargs):
         if self._login():
