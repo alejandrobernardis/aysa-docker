@@ -59,14 +59,11 @@ class TopLevelCommand(Command):
         """
         import os
         import threading
-
-
         def pip_upgrade():
             os.system('python -m pip install {}'.format(
                 'https://github.com/alejandrobernardis/aysa-docker/archive'\
                 '/master.zip')
             )
-
         x = threading.Thread(target=pip_upgrade)
         x.start()
 
