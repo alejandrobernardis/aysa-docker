@@ -3,14 +3,16 @@
 # Created: 2019/10/29
 # ~
 
-import requests
-import tempfile
-
-
-URL = 'https://github.com/alejandrobernardis/aysa-docker/archive'\
-      '/master.zip'
+import os
+import pip
 
 
 def main():
-    with requests.Session() as r:
-        pass
+    os.system('python -m pip install {}'.format(
+        'https://github.com/alejandrobernardis/aysa-docker/archive'\
+        '/master.zip'
+    ))
+
+
+if __name__ == '__main__':
+    main()

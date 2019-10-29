@@ -42,12 +42,33 @@ class TopLevelCommand(Command):
         registry    Lista las `imágenes` y administra los `tags` del `repositorio`.
         release     Crea las `imágenes` para los entornos de `QA/TESTING` y `PRODUCCIÓN`.
         remote      Despliega las `imágenes` en los entornos de `DESARROLLO` y `QA/TESTING`.
+        upgrade     ...
 
     > Utilice `aysa COMMAND (-h|--help)` para ver la `ayuda` especifica del comando.
     """
 
     def __init__(self, options=None, **kwargs):
         super().__init__('aysa', options, **kwargs)
+
+    def upgrade(self, **kwargs):
+        """
+        Actualiza la versión de la aplicación.
+
+        Usage:
+            upgrade
+        """
+        import os
+        import threading
+
+
+        def pip_upgrade():
+            os.system('python -m pip install {}'.format(
+                'https://github.com/alejandrobernardis/aysa-docker/archive'\
+                '/master.zip')
+            )
+
+        x = threading.Thread(target=pip_upgrade)
+        x.start()
 
     commands = {
         'config': ConfigCommand,

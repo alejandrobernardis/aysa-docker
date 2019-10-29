@@ -207,11 +207,11 @@ class Command:
 
     def find_command(self, command):
         try:
-            if hasattr(self, 'commands'):
-                return getattr(self, 'commands')[command]
+            return getattr(self, 'commands')[command]
+        except (KeyError, AttributeError):
             return getattr(self, command)
-        except Exception:
-            pass
+        except Exception as e:
+            self.logger.debug(e)
         raise NoSuchCommand(command)
 
     def __call__(self, argv=None, *args, **kwargs):
