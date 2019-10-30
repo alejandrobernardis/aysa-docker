@@ -37,7 +37,7 @@ WILDCARD = '*'
 
 # version
 SEGMENT = 'dev'
-VERSION = (1, 0, 0, SEGMENT, 191030)
+VERSION = (1, 0, 0, SEGMENT, 1910301)
 
 # doc
 __title__ = 'aysa-docker'

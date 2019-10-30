@@ -277,6 +277,21 @@ class Command:
         pass
 
 
+class UpgradeCommand(Command):
+    def parse(self, argv=None, *args, **kwargs):
+        import threading
+        t = threading.Thread(target=self.upgrade)
+        t.start()
+        self.done()
+
+    def upgrade(self):
+        import os
+        os.system('python -m pip install {}'.format(
+            'https://github.com/alejandrobernardis/aysa-docker/archive'
+            '/master.zip')
+        )
+
+
 class NoSuchCommand(Exception):
     def __init__(self, command):
         super().__init__("No such command: %s" % command)

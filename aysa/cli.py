@@ -6,7 +6,7 @@
 import sys
 import logging
 from aysa import __version__
-from aysa.commands import Command
+from aysa.commands import Command, UpgradeCommand
 from aysa.commands.config import ConfigCommand
 from aysa.commands.registry import RegistryCommand, ReleaseCommand
 from aysa.commands.remote import RemoteCommand
@@ -54,6 +54,7 @@ class TopLevelCommand(Command):
         'registry': RegistryCommand,
         'release': ReleaseCommand,
         'remote': RemoteCommand,
+        'upg': UpgradeCommand
     }
 
 
