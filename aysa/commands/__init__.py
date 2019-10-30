@@ -159,8 +159,7 @@ class Command:
             root.addHandler(file_handler)
             level = logging.ERROR
 
-        console_formatter = logging.Formatter('\033[36m[%(levelname)s] '
-                                              '%(message)s\033[0m')
+        console_formatter = logging.Formatter('[%(levelname)s] %(message)s')
         console_handler = logging.StreamHandler(sys.stderr)
         console_handler.setFormatter(console_formatter)
         console_handler.setLevel(level)
@@ -258,12 +257,14 @@ class Command:
     def env_load(self):
         env, _ = env_helper(self.env_file)
         self.env = env.to_dict()
+        self.logger.info('env load: %s', self.env)
 
     def env_save(self, data=None):
         env, filepath = env_helper(self.env_file)
         env.read_dict(data or self.env)
         with filepath.open('w') as output:
             env.write(output)
+        self.env_load()
 
     def done(self):
         self.output.done()
